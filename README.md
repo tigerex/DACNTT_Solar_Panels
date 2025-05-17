@@ -59,4 +59,11 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
     - | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
     - | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
 
-5. Nào train được model tui chỉ tiếp. efaefaeferrrrrrrr
+5. Ok, sau khi đã có môi trường hoàn hảo rồi thì bây giờ các bạn có thể làm gì để coi mấy thứ tui đã làm?
+    - Có 2 file .ipynb
+       - file model_train thì như cái tên, để train model
+       - file testIMG là nơi tui tiền xử lí ảnh trước khi đưa vào train
+       - Vậy ảnh đâu? Rất tiếc tui không thể đưa toàn bộ dataset lên đây, do nó quá nặng (20GB)
+       - Tui có để vài ảnh cho các bạn quậy:
+          - Model đọc file .tif nên file .png hay .jpe cần được đổi lại => vào testIMG để đổi
+          - Hết rồi, tạm thời tới đây thôi
