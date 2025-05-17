@@ -44,8 +44,8 @@ Nhưng mà môi trường ảo vẫn nằm trên pc??? SHUT UP TUI KHÔNG BIẾT
 ```bash
 venv\Scripts\activate
 ```
-Thế là xong tạo môi trường, và nhìn như vầy là ok!!!
-![Môi trường ảo đang hoạt động](image.png)
+Thế là xong tạo môi trường, và nhìn như vầy là ok!!!  
+![Môi trường ảo đang hoạt động](image.png)  
 4. Tiếp theo mấy bạn cài package Pytorch với những thứ khác vô cái môi trường trống trơn này
 ```bash
 pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
