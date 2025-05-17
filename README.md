@@ -49,7 +49,8 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
 4. Tiếp theo mấy bạn cài package Pytorch với những thứ khác vô cái môi trường trống trơn này
 ```bash
     pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
-```
+```  
+### Package do wut?  
             | Package                       | Mô tả ngắn gọn                                                 |
             | ----------------------------- | -------------------------------------------------------------- |
             | `matplotlib`                  | Vẽ biểu đồ, hiển thị kết quả trực quan                         |
