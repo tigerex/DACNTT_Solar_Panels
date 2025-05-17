@@ -7,20 +7,20 @@ _Đồ Án CNTT - Học kỳ 2433_
 ## 🚀 Cài đặt nhanh
 
 ```bash
-git clone https://github.com/tigerex/DACNTT_Solar_Panels.git
+    git clone https://github.com/tigerex/DACNTT_Solar_Panels.git
 ```
 ---
 ## PhongEnd Document:
 ```bash 
-cd /PhongEnd
+    cd /PhongEnd
 ```
 Cài đặt các package cho PhongEnd
 ```bash
-npm i   
+    npm i   
 ```
 Chạy chương trình bằng web
 ```bash
-npm run 
+    npm run 
 ```
 Thêm vô đây please
 
@@ -38,17 +38,17 @@ Nhưng mà môi trường ảo vẫn nằm trên pc??? SHUT UP TUI KHÔNG BIẾT
 1. Đứng tại folder root (vì tui thiết kế file như vậy rồi, tạo ở chỗ khác không được ráng chịu)
 2. CCái venv là môi trường ảo, cái venv sau đó là tên cho cái môi trường ảo đó, đổi tên tùy ý
 ```bash 
-    bashpython -m venv venv
+    python -m venv venv
 ``` 
 3. Giờ thì kích hoạt môi trường ảo lên (dùng xong tắt nó đi thì chỉ cần deactivate vô terminal thôi)
 ```bash
-venv\Scripts\activate
+    venv\Scripts\activate
 ```
 Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!  
 ![Môi trường ảo đang hoạt động](image.png)  
 4. Tiếp theo mấy bạn cài package Pytorch với những thứ khác vô cái môi trường trống trơn này
 ```bash
-pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
+    pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
 ```
 | Package                       | Mô tả ngắn gọn                                                 |
 | ----------------------------- | -------------------------------------------------------------- |
