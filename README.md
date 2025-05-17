@@ -60,4 +60,4 @@ pip install matplotlib numpy torch torchvision segmentation-models-pytorch album
 | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
 | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
 
-5. Nào train được model tui chỉ tiếp.
+5. Nào train được model tui chỉ tiếp. efaefaefe
