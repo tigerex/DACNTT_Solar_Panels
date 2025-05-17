@@ -50,15 +50,15 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
 ```bash
     pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
 ```  
-### Package do wut?  
-            | Package                       | Mô tả ngắn gọn                                                 |
-            | ----------------------------- | -------------------------------------------------------------- |
-            | `matplotlib`                  | Vẽ biểu đồ, hiển thị kết quả trực quan                         |
-            | `numpy`                       | Tính toán ma trận, xử lý dữ liệu số                            |
-            | `torch`                       | Framework chính để train mô hình deep learning (PyTorch)       |
-            | `torchvision`                 | Tiện ích cho việc xử lý ảnh trong PyTorch                      |
-            | `segmentation-models-pytorch` | Bộ model segmentation có sẵn (U-Net, DeepLabV3,...)            |
-            | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
-            | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
+- Package do wut?  
+    - | Package                       | Mô tả ngắn gọn                                                 |
+    - | ----------------------------- | -------------------------------------------------------------- |
+    - | `matplotlib`                  | Vẽ biểu đồ, hiển thị kết quả trực quan                         |
+    - | `numpy`                       | Tính toán ma trận, xử lý dữ liệu số                            |
+    - | `torch`                       | Framework chính để train mô hình deep learning (PyTorch)       |
+    - | `torchvision`                 | Tiện ích cho việc xử lý ảnh trong PyTorch                      |
+    - | `segmentation-models-pytorch` | Bộ model segmentation có sẵn (U-Net, DeepLabV3,...)            |
+    - | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
+    - | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
 
 5. Nào train được model tui chỉ tiếp. efaefaefe
