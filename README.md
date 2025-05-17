@@ -51,12 +51,12 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
     pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
 ```  
 - Package do wut?  
-    1. | `matplotlib`                  | Vẽ biểu đồ, hiển thị kết quả trực quan                         |
-    2. | `numpy`                       | Tính toán ma trận, xử lý dữ liệu số                            |
-    3. | `torch`                       | Framework chính để train mô hình deep learning (PyTorch)       |
-    4. | `torchvision`                 | Tiện ích cho việc xử lý ảnh trong PyTorch                      |
-    5. | `segmentation-models-pytorch` | Bộ model segmentation có sẵn (U-Net, DeepLabV3,...)            |
-    6. | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
-    7. | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
+    - | `matplotlib`                  | Vẽ biểu đồ, hiển thị kết quả trực quan                         |
+    - | `numpy`                       | Tính toán ma trận, xử lý dữ liệu số                            |
+    - | `torch`                       | Framework chính để train mô hình deep learning (PyTorch)       |
+    - | `torchvision`                 | Tiện ích cho việc xử lý ảnh trong PyTorch                      |
+    - | `segmentation-models-pytorch` | Bộ model segmentation có sẵn (U-Net, DeepLabV3,...)            |
+    - | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
+    - | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
 
 5. Nào train được model tui chỉ tiếp. efaefaefe
