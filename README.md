@@ -28,8 +28,8 @@ Thêm vô đây please
 **Do it**
 
 ## Model Training Document:
-Thấy cái folder *.venv* trên cùng trong folder root khom?
-![Look!](image-1.png)
+Thấy cái folder *.venv* trên cùng trong folder root khom?  
+![Look!](image-1.png)  
 Đó là môi trường Python ảo. Tại sao cần? Để không conflict với môi trường trên pc tui. 
 Nhưng mà môi trường ảo vẫn nằm trên pc??? SHUT UP TUI KHÔNG BIẾT, VSCODE KÊU TUI LÀM THẾ OK!!!
 
