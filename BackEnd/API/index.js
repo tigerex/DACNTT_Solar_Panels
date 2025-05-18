@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const moduleRoutes = require('./Routes/Module'); // ✅ sửa lại đúng file: Module.js
+const moduleRoutes = require('./Routes/Module');
 
 const app = express();
-const PORT = 3001;
+const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -16,5 +16,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`\n=============  Server is running on http://localhost:${PORT} =============\n`);
 });
