@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const userRoutes = require('./Routes/ModuleControllers'); // không cần .js
+const moduleRoutes = require('./Routes/Module'); // ✅ sửa lại đúng file: Module.js
 
 const app = express();
 const PORT = 3001;
@@ -8,7 +8,8 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/test', userRoutes);
+// Dùng một route duy nhất, rõ ràng
+app.use('/api', moduleRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello from Express backend!');
