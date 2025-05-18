@@ -46,7 +46,7 @@ Nhưng mà môi trường ảo vẫn nằm trên pc??? SHUT UP TUI KHÔNG BIẾT
 ```
 Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!  
 ![Môi trường ảo đang hoạt động](image.png)  
-4. Tiếp theo mấy bạn cài package Pytorch với những thứ khác vô cái môi trường trống trơn này
+ 4. Tiếp theo mấy bạn cài package Pytorch với những thứ khác vô cái môi trường trống trơn này
 ```bash
     pip install matplotlib numpy torch torchvision segmentation-models-pytorch albumentations tifffile
 ```  
@@ -59,4 +59,11 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
     - | `albumentations`              | Thư viện tăng cường ảnh (image augmentation) rất mạnh và nhanh |
     - | `tifffile`                    | Đọc và ghi các file ảnh định dạng `.tif`                       |
 
-5. Nào train được model tui chỉ tiếp. efaefaefe
+5. Ok, sau khi đã có môi trường hoàn hảo rồi thì bây giờ các bạn có thể làm gì để coi mấy thứ tui đã làm?
+    - Có 2 file .ipynb
+       - file model_train thì như cái tên, để train model
+       - file testIMG là nơi tui tiền xử lí ảnh trước khi đưa vào train
+       - Vậy ảnh đâu? Rất tiếc tui không thể đưa toàn bộ dataset lên đây, do nó quá nặng (20GB)
+       - Tui có để vài ảnh cho các bạn quậy:
+          - Model đọc file .tif nên file .png hay .jpe cần được đổi lại => vào testIMG để đổi
+          - Hết rồi, tạm thời tới đây thôi
