@@ -51,7 +51,6 @@ function App() {
       mapboxgl: mapboxgl,
       placeholder: "Tìm địa chỉ ở Việt Nam...",
       language: "vi",
-      countries: "vn",
       marker: true, // tự đặt marker
     });
 
