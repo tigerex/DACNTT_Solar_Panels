@@ -1,3 +1,15 @@
+## Hiện tại thì dữ liệu ở việt nam không tốt, nói thẳng là kém chất lượng quá không xài được
+
+### Nên tui đang làm với hình ảnh map bên Ohio, Mỹ
+
+#### Vì sao ư? Vì tui tình cờ thấy và thích nên chọn nó
+
+#### Dị thôi đó, nếu chưa đọc readme bên Quan_BackendTest thì hãy đọc. Xin cảm ơn
+
+
+
+
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
