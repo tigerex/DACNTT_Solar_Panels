@@ -2,10 +2,8 @@ import cv2
 import numpy as np
 import math
 
+# Tính góc giữa 3 điểm trong không gian 2D.
 def calculate_angle(pt1, pt2, pt3):
-    """
-    Tính góc tại điểm pt2 giữa pt1 và pt3.
-    """
     a = np.array(pt1)
     b = np.array(pt2)
     c = np.array(pt3)
@@ -17,17 +15,13 @@ def calculate_angle(pt1, pt2, pt3):
     angle = np.arccos(cosine_angle)
     return np.degrees(angle)
 
+# Tính diện tích hình bình hành dựa trên chiều dài cạnh a, b và góc nghiêng.
 def calculate_parallelogram_area(a: float, b: float, angle_deg: float) -> float:
-    """
-    Tính diện tích hình bình hành với góc nghiêng.
-    """
     angle_rad = math.radians(angle_deg)
     return a * b * math.sin(angle_rad)
 
+# Phân tích hình dạng mái nhà từ ảnh: hình chữ nhật hay bình hành.
 def detect_roof_shape(image_path: str) -> dict:
-    """
-    Phân tích hình dạng mái nhà từ ảnh: hình chữ nhật hay bình hành.
-    """
     img = cv2.imread(image_path)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)

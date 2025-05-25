@@ -7,26 +7,24 @@ import os
 
 router = APIRouter()
 
+# API route để kiểm tra kết nối
 @router.get("/hello")
 def hello():
     return {"message": "Hello from the API!"}
 
+# API route để tính diện tích mái nhà
 @router.get("/area")
 def area(length: float, width: float):
     return calculate_roof_area(length, width)
 
+# API route để phân tích hình dạng mái nhà
 @router.get("/analyze-shape")
 def analyze_shape(length: float, width: float, angle: float):
-    """
-    Phân tích mái nhà bằng cách nhập chiều dài, chiều rộng và góc nghiêng.
-    """
     return analyze_roof_shape(length, width, angle)
 
+# API route để phân tích hình dạng mái nhà từ ảnh
 @router.post("/analyze-image")
 def analyze_image(file: UploadFile = File(...)):
-    """
-    Nhận ảnh, lưu tạm và phân tích hình dạng mái nhà (rectangle / parallelogram).
-    """
     temp_path = f"temp_{file.filename}"
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
