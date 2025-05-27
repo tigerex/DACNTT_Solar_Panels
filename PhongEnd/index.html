@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>ArcGIS Map with API Key</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://js.arcgis.com/4.29/"></script>
+
+</head>
+
+<body>
+
+  <script src="script.js" type="module"></script>
+
+
+  <div id="viewDiv"></div>
+  <!-- Nút hiện lại -->
+  <button id="reopenBtn">❯</button>
+
+  <!-- Khung chứa ảnh + thông tin -->
+  <div id="resultBox">
+    <div id="content">
+      <img id="staticMap" />
+      <div id="info">
+        <p><strong>Số panel:</strong> <span id="panelCount">?</span></p>
+        <p><strong>Điện năng ước tính:</strong> <span id="powerEstimate">?</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nút thu gọn -->
+  <button id="toggleBtn">❮</button>
+
+
+
+
+
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+<!-- <script src="...arcgis..."></script> -->
+<!-- <script src="env.js"></script>
+  <script>
+    key = window.env.API_KEY_ARCGIS;
+  </script> -->
+
+
+
+<!-- let marker;
+
+view.on("click", function (event) {
+    const { longitude, latitude } = event.mapPoint;
+    console.log(event);
+    console.log("Clicked coordinates:", latitude, longitude);
+    console.log(typeof(latitude), typeof(longitude));
+
+    if (marker) marker.remove();
+
+    marker = document.createElement("div");
+    marker.className = "custom-marker";
+
+    fetch("http://localhost:8001/detect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat: latitude, lng: longitude })
+    })
+    .then(res => res.json())
+    .then(data => console.log("Backend response:", data))
+    .catch(err => console.error("Error:", err));
+}); -->
+
+
+
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>ArcGIS World Imagery</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.18/"></script>
+    <script>
+        require(["esri/Map", "esri/views/MapView", "esri/widgets/Search"], function (Map, MapView, Search) {
+            var map = new Map({
+                basemap: "satellite" // Sử dụng bản đồ vệ tinh
+            });
+
+            var view = new MapView({
+                container: "viewDiv",
+                map: map,
+                center: [106.6601, 10.7626], // Tọa độ trung tâm (TP.HCM)
+                zoom: 18
+            });
+
+            const searchWidget = new Search({
+                view: view,
+                placeholder: "Tìm địa điểm ở Việt Nam",
+                includeDefaultSources: true
+            });
+            view.ui.add(searchWidget, {
+                position: "top-right"
+            });
+
+        });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv" style="height: 100vh; width: 100vw;"></div>
+</body>
+
+</html> -->
