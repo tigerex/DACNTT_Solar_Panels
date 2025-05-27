@@ -1,35 +1,18 @@
-from fastapi import APIRouter, UploadFile, File
-from controllers.module_controllers import calculate_roof_area, analyze_roof_shape
-from services.image_analysis_service import detect_roof_shape
-
-import shutil
-import os
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import List
+from controllers.module_controllers import calculate_area_from_coordinates
 
 router = APIRouter()
 
-# API route để kiểm tra kết nối
-@router.get("/hello")
-def hello():
-    return {"message": "Hello from the API!"}
+class Coordinate(BaseModel):
+    lat: float
+    lng: float
 
-# API route để tính diện tích mái nhà
-@router.get("/area")
-def area(length: float, width: float):
-    return calculate_roof_area(length, width)
+class PolygonRequest(BaseModel):
+    coordinates: List[Coordinate]
 
-# API route để phân tích hình dạng mái nhà
-@router.get("/analyze-shape")
-def analyze_shape(length: float, width: float, angle: float):
-    return analyze_roof_shape(length, width, angle)
-
-# API route để phân tích hình dạng mái nhà từ ảnh
-@router.post("/analyze-image")
-def analyze_image(file: UploadFile = File(...)):
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    result = detect_roof_shape(temp_path)
-    os.remove(temp_path)  # Xoá file tạm
-
-    return result
+@router.post("/calc-area-from-coords")
+def calc_area_from_coords(polygon: PolygonRequest):
+    coords = [(c.lng, c.lat) for c in polygon.coordinates]
+    return calculate_area_from_coordinates(coords)
