@@ -32,6 +32,7 @@ function App() {
 
   const [data, setData] = useState(null);
 
+  // Hàm di chuyển bản đồ đến vị trí mới và cập nhật marker
   const moveTo = (lat, lng) => {
     if (mapRef.current) {
       setMarker({ lat, lng }); // cập nhật marker
@@ -40,6 +41,7 @@ function App() {
     }
   };
 
+  // Hàm xử lý khi autocomplete chọn địa điểm
   const handlePlaceChanged = () => {
     const place = autocompleteRef.current.getPlace();
     if (!place.geometry) return;
@@ -64,6 +66,8 @@ function App() {
   //   });
   // };
 
+
+  // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend
   const handlePolygonComplete = (poly) => {
     
     const path = poly.getPath().getArray().map((latLng) => ({
@@ -99,6 +103,8 @@ function App() {
       .catch((err) => console.error("Lỗi khi gửi polygon:", err));
   };
 
+
+  // Hàm đóng panel kết quả
   const handleClose = () => {
     console.log("Đóng panel");
     setShowResult(false);
@@ -156,6 +162,8 @@ function App() {
         )}
       </GoogleMap>
 
+
+      {/* Đoạn này là gọi ResultPanel để hiển thị ảnh mái nhà với panel nè */}
       {showResult && (
         <ResultPanel
           image={image}
