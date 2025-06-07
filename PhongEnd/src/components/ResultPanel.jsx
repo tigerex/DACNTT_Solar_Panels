@@ -13,37 +13,30 @@ export default function ResultPanel({ image, data, onClose }) {
 
       {/* Đoạn này bắt đầu hiện ảnh tĩnh mái nhà, panel và thông tin diện tích đồ nè mà chưa làm cũng chưa chỉnh */}
       <div className="panel-content" style={{ position: "relative", width: 400, height: 400 }}>
-        
-        {/* Map mái nhà nè */}
+
+        {/* Ảnh tĩnh mái nhà */}
         <img src={image} alt="Static Map" className="result-image" style={{ width: "100%", height: "100%", display: "block" }} />
 
-        {/* Xếp panel lên mái nhà nè mà không được chán đời ghê chứ */}
-        {data.placed_panels.map((p, i) => (
-          <img
-            key={i}
-            src={`/assets/panels/${data.panel_image}`} // Sử dụng ảnh panel từ public/assets/panels
-            style={{
-              position: "absolute",
-              left: `${p.x}px`, // Căn chỉnh theo tọa độ x của panel
-              top: `${p.y}px`, // Căn chỉnh theo tọa độ y của panel
-              width: `${p.width}px`, // Căn chỉnh theo kích thước width của panel
-              height: `${p.height}px`, // Căn chỉnh theo kích thước height của panel
-              pointerEvents: "none", 
-              transform: `rotate(-${p.angle}deg)`, // Xoay panel theo góc angle
-              transformOrigin: "center center" // Đặt gốc xoay ở giữa panel
-            }}
+        {/* Hiển thị polygon mái nhà */}
+        <svg
+          width="400"
+          height="400"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        >
+          <polygon
+            points={data.shrunken_polygon_pixels.map(p => `${p.x},${p.y}`).join(" ")}
+            fill="rgba(0, 128, 255, 0.2)"
+            stroke="blue"
+            strokeWidth="2"
           />
-        ))}
-
-
+        </svg>
 
         <div className="info">
           <h3>Thông tin mái nhà</h3>
-          {/* <p>Hình dạng: <b>{shape}</b></p> */}
           <p>Diện tích: <b>{data.area_m2?.toFixed(2)} m²</b></p>
-
         </div>
       </div>
+
     </div>
   );
 }

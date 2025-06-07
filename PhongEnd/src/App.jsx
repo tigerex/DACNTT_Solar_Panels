@@ -1,17 +1,20 @@
-import { GoogleMap, LoadScript, DrawingManager, Marker, Polygon, Autocomplete } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  LoadScript,
+  DrawingManager,
+  Marker,
+  Polygon,
+  Autocomplete,
+} from "@react-google-maps/api";
 import { useState, useRef, useEffect } from "react";
 import ResultPanel from "./components/ResultPanel";
 
-
 const containerStyle = {
   width: "100vw",
-  height: "100vh"
+  height: "100vh",
 };
 
 const center = { lat: 10.7626, lng: 106.6602 };
-
-
-
 
 function App() {
   const [marker, setMarker] = useState(null);
@@ -24,11 +27,9 @@ function App() {
   const [showResult, setShowResult] = useState(false);
   const [panel, setPanel] = useState(null);
 
-
   const [shape, setShape] = useState(null);
   const [area, setArea] = useState(null);
   const [image, setImage] = useState(null);
-
 
   const [data, setData] = useState(null);
 
@@ -66,14 +67,19 @@ function App() {
   //   });
   // };
 
+// =========================================================================================================================
 
+  // Chủ yếu là đang làm cái này nè, gửi polygon về backend
+  // Để vẽ panel lên
   // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend
   const handlePolygonComplete = (poly) => {
-    
-    const path = poly.getPath().getArray().map((latLng) => ({
-      lat: latLng.lat(),
-      lng: latLng.lng(),
-    }));
+    const path = poly
+      .getPath()
+      .getArray()
+      .map((latLng) => ({
+        lat: latLng.lat(),
+        lng: latLng.lng(),
+      }));
     setPolygonPath(path);
     polygonRef.current = poly;
     console.log("Polygon coordinates:", path);
@@ -82,7 +88,7 @@ function App() {
     fetch("http://localhost:8000/roof/api/polygon", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coordinates: path })
+      body: JSON.stringify({ coordinates: path }),
     })
       .then((res) => res.json())
       .then((result) => {
@@ -93,32 +99,38 @@ function App() {
 
         // Ví dụ:
         // setShape(data[0].shape);
+        setPolygonPath([]); // cập nhật polygon với kết quả từ backend
+        polygonPath.length = 0; // xóa polygon hiện tại
         setData(result);
-        setImage(`data:image/png;base64,${result.roof_image}`);
+        // setImage(`data:image/png;base64,${result.roof_image}`);
         // setArea(data.area_m2);
-        
+
         // setPanel(data.panel)
         setShowResult(true); // hiển thị panel kết quả
       })
       .catch((err) => console.error("Lỗi khi gửi polygon:", err));
   };
 
+  // =========================================================================================================================
 
   // Hàm đóng panel kết quả
-  const handleClose = () => {
-    console.log("Đóng panel");
-    setShowResult(false);
-    setPolygonPath([]); // xóa polygon
-  };
+  // const handleClose = () => {
+  //   console.log("Đóng panel");
+  //   setShowResult(false);
+  //   setPolygonPath([]); // xóa polygon
+  // };
 
   return (
-    <LoadScript googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} libraries={["drawing", "places"]}>
-
+    <LoadScript
+      googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} //Nạp API key từ .env
+      libraries={["drawing", "places"]} // Nạp các thư viện cần thiết, drwaing để vẽ polygon, places để sử dụng Autocomplete (search places)
+    >
       <Autocomplete
-        onLoad={(auto) => (autocompleteRef.current = auto)}
-        onPlaceChanged={handlePlaceChanged}
+        onLoad={(auto) => (autocompleteRef.current = auto)} // Lưu tham chiếu đến Autocomplete
+        onPlaceChanged={handlePlaceChanged} // Gọi hàm khi chọn địa điểm
       >
-        <input
+        {/* Khung tìm kiếm địa chỉ nè */}
+        <input 
           type="text"
           ref={inputRef}
           placeholder="Tìm kiếm địa điểm..."
@@ -134,51 +146,107 @@ function App() {
         />
       </Autocomplete>
 
+      {/* Bản đồ Google Maps */}
       <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
+        mapContainerStyle={containerStyle} // Kích thước của bản đồ
+        
+        //Vị trí trung tâm ban đầu của bản đồ
+        center={ 
+          data?.shrunken_polygon
+            ? { lat: data.center_lat, lng: data.center_lng }
+            : center
+        }
         zoom={18}
-        mapTypeId="satellite"
+        mapTypeId="satellite" // Chế độ bản đồ là vệ tinh
         // onClick={handleMapClick}
-        onLoad={(map) => (mapRef.current = map)}
+        onLoad={(map) => (mapRef.current = map)} // Lưu tham chiếu đến bản đồ để sử dụng sau này
       >
+        {marker && <Marker position={marker} />} 
 
-
-        {marker && <Marker position={marker} />}
-
-        <DrawingManager
+        {/* Vẽ polygon trên bản đồ */}
+        <DrawingManager 
           onPolygonComplete={handlePolygonComplete}
           options={{
             drawingControl: true,
             drawingControlOptions: {
               position: 3,
-              drawingModes: ["polygon"]
-            }
+              drawingModes: ["polygon"],
+            },
           }}
         />
 
-        {polygonPath.length > 0 && (
-          <Polygon path={polygonPath} options={{ fillColor: "#00F", fillOpacity: 0.3 }} />
+
+        {/* Polygon vẽ bởi người dùng */}
+        {data?.shrunken_polygon == [] && polygonPath.length > 0 && (
+          <Polygon
+            path={polygonPath}
+            options={{ fillColor: "#00F", fillOpacity: 0.3 }}
+          />
         )}
+
+        {/* Vẽ polygon từ dữ liệu backend đã gửi về, cái polygon đã được chỉnh sửa bởi backend */}
+        {data?.shrunken_polygon && (
+          <Polygon
+            path={data.shrunken_polygon}
+            options={{
+              fillColor: "#0000FF",
+              fillOpacity: 0.3,
+              strokeColor: "#0000FF",
+              strokeOpacity: 1,
+              strokeWeight: 3,
+            }}
+          />
+        )}
+
+        {/* Vẽ các panel từ dữ liệu backend đã gửi về */}
+        {data?.panels_latlng?.length > 0 &&
+          data.panels_latlng.map((panelCoords, idx) => (
+            <Polygon
+              {...console.log("Panel coordinates:", panelCoords)}
+              key={idx}
+              path={panelCoords}
+              options={{
+                fillColor: "#00AA00",
+                fillOpacity: 0.4,
+                strokeColor: "#00AA00",
+                strokeOpacity: 0.8,
+                strokeWeight: 1,
+              }}
+            />
+        ))}
+
+        {/* Cái này để vẽ mấy cái panel lúc nó chưa được xoay lại theo hướng mái nhà */}
+        {/* {data?.test_latlng?.length > 0 &&
+          data.test_latlng.map((panelCoords, idx) => (
+            <Polygon
+              {...console.log("Hehehehehe:", panelCoords)}
+              key={idx}
+              path={panelCoords}
+              options={{
+                fillColor: "#AA0000",
+                fillOpacity: 0.4,
+                strokeColor: "#AA0000",
+                strokeOpacity: 0.8,
+                strokeWeight: 1,
+              }}
+            />
+        ))} */}
+
+        
+
       </GoogleMap>
 
-
       {/* Đoạn này là gọi ResultPanel để hiển thị ảnh mái nhà với panel nè */}
-      {showResult && (
+      {/* {showResult && (
         <ResultPanel
           image={image}
           // shape={shape}
           data={data}
           onClose={handleClose}
         />
-      )}
+      )} */}
     </LoadScript>
-
-
   );
 }
 
 export default App;
-
-
-
