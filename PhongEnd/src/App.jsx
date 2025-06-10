@@ -7,7 +7,8 @@ import {
   Autocomplete,
 } from "@react-google-maps/api";
 import { useState, useRef, useEffect } from "react";
-import ResultPanel from "./components/ResultPanel";
+import { OverlayView } from "@react-google-maps/api";
+
 
 const containerStyle = {
   width: "100vw",
@@ -25,11 +26,6 @@ function App() {
   const autocompleteRef = useRef(null);
 
   const [showResult, setShowResult] = useState(false);
-  const [panel, setPanel] = useState(null);
-
-  const [shape, setShape] = useState(null);
-  const [area, setArea] = useState(null);
-  const [image, setImage] = useState(null);
 
   const [data, setData] = useState(null);
 
@@ -52,20 +48,7 @@ function App() {
     moveTo(lat, lng);
   };
 
-  // const handleMapClick = (e) => {
-  //   const lat = e.latLng.lat();
-  //   const lng = e.latLng.lng();
-  //   setMarker({ lat, lng });
 
-  //   console.log(`lat: ${lat}, lng: ${lng}`);
-
-  //   // Gửi điểm đến backend (ví dụ)
-  //   fetch("http://localhost:8001/api/location", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({ lat, lng })
-  //   });
-  // };
 
 // =========================================================================================================================
 
@@ -82,7 +65,7 @@ function App() {
       }));
     setPolygonPath(path);
     polygonRef.current = poly;
-    console.log("Polygon coordinates:", path);
+    // console.log("Polygon coordinates:", path);
 
     // Gửi polygon đến backend
     fetch("http://localhost:8000/roof/api/polygon", {
@@ -92,33 +75,25 @@ function App() {
     })
       .then((res) => res.json())
       .then((result) => {
-        console.log("Kết quả từ backend:", result);
-        // console.log("Shape:", data[0].shape);
-        // console.log("Area:", data.area_m2);
-        // console.log("Image (base64):", data.roof_image.slice(0, 50)); // chỉ log 1 phần chuỗi
+        
+        // ❗ Gỡ polygon thật ra khỏi bản đồ
+        if (polygonRef.current) {
+          polygonRef.current.setMap(null);
+          polygonRef.current = null;
+        }
 
-        // Ví dụ:
-        // setShape(data[0].shape);
-        setPolygonPath([]); // cập nhật polygon với kết quả từ backend
-        polygonPath.length = 0; // xóa polygon hiện tại
+        // ❗ Clear state để xóa polygon đang giữ
+        setPolygonPath([]);
+
+        // ✅ Cập nhật data để hiển thị polygon từ backend
         setData(result);
-        // setImage(`data:image/png;base64,${result.roof_image}`);
-        // setArea(data.area_m2);
-
-        // setPanel(data.panel)
-        setShowResult(true); // hiển thị panel kết quả
+        setShowResult(true); // Hiển thị panel kết quả
       })
       .catch((err) => console.error("Lỗi khi gửi polygon:", err));
   };
 
   // =========================================================================================================================
 
-  // Hàm đóng panel kết quả
-  // const handleClose = () => {
-  //   console.log("Đóng panel");
-  //   setShowResult(false);
-  //   setPolygonPath([]); // xóa polygon
-  // };
 
   return (
     <LoadScript
@@ -177,7 +152,16 @@ function App() {
 
 
         {/* Polygon vẽ bởi người dùng */}
+        {(!data?.shrunken_polygon || data.shrunken_polygon.length === 0) && polygonPath.length > 0 && (
+          console.log("Amen:"),
+          <Polygon
+            path={polygonPath}
+            options={{ fillColor: "#00F", fillOpacity: 0.3 }}
+          />
+        )}
+
         {data?.shrunken_polygon == [] && polygonPath.length > 0 && (
+          console.log("Amen:"),
           <Polygon
             path={polygonPath}
             options={{ fillColor: "#00F", fillOpacity: 0.3 }}
@@ -186,6 +170,7 @@ function App() {
 
         {/* Vẽ polygon từ dữ liệu backend đã gửi về, cái polygon đã được chỉnh sửa bởi backend */}
         {data?.shrunken_polygon && (
+          console.log("Polygon path:", polygonPath),
           <Polygon
             path={data.shrunken_polygon}
             options={{
@@ -202,7 +187,6 @@ function App() {
         {data?.panels_latlng?.length > 0 &&
           data.panels_latlng.map((panelCoords, idx) => (
             <Polygon
-              {...console.log("Panel coordinates:", panelCoords)}
               key={idx}
               path={panelCoords}
               options={{
@@ -214,8 +198,31 @@ function App() {
               }}
             />
         ))}
+      </GoogleMap>
+    </LoadScript>
+  );
+}
 
-        {/* Cái này để vẽ mấy cái panel lúc nó chưa được xoay lại theo hướng mái nhà */}
+export default App;
+
+
+
+  // const handleMapClick = (e) => {
+  //   const lat = e.latLng.lat();
+  //   const lng = e.latLng.lng();
+  //   setMarker({ lat, lng });
+
+  //   console.log(`lat: ${lat}, lng: ${lng}`);
+
+  //   // Gửi điểm đến backend (ví dụ)
+  //   fetch("http://localhost:8001/api/location", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ lat, lng })
+  //   });
+  // };
+
+          {/* Cái này để vẽ mấy cái panel lúc nó chưa được xoay lại theo hướng mái nhà */}
         {/* {data?.test_latlng?.length > 0 &&
           data.test_latlng.map((panelCoords, idx) => (
             <Polygon
@@ -233,20 +240,3 @@ function App() {
         ))} */}
 
         
-
-      </GoogleMap>
-
-      {/* Đoạn này là gọi ResultPanel để hiển thị ảnh mái nhà với panel nè */}
-      {/* {showResult && (
-        <ResultPanel
-          image={image}
-          // shape={shape}
-          data={data}
-          onClose={handleClose}
-        />
-      )} */}
-    </LoadScript>
-  );
-}
-
-export default App;

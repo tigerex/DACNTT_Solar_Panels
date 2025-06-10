@@ -188,24 +188,43 @@ def generate_panel_grid(
 
     # 4. Xếp panel theo lưới trục X/Y chuẩn
     test=[]
-    y = miny # Vị trí bắt đầu theo trục Y
-    while y + panel_height <= maxy: # Kiểm tra xem panel có nằm trong bounds của mái nhà đã xoay không
-        x = minx # Vị trí bắt đầu theo trục X
-        while x + panel_width <= maxx: # Kiểm tra xem panel có nằm trong bounds của mái nhà đã xoay không
-            panel = Polygon([ # Tạo polygon cho panel
-                (x, y), # Điểm góc trên bên trái
-                (x + panel_width, y), # Điểm góc trên bên phải
-                (x + panel_width, y + panel_height), # Điểm góc dưới bên phải
-                (x, y + panel_height) # Điểm góc dưới bên trái
+
+    # Tính kích thước vùng mái
+    width = maxx - minx
+    height = maxy - miny
+
+    # Tính số panel có thể xếp theo trục X và Y
+    num_x = int((width + gap_x) // (panel_width + gap_x))
+    num_y = int((height + gap_y) // (panel_height + gap_y))
+
+    # Tính khoảng dư để canh giữa
+    used_width = num_x * panel_width + (num_x - 1) * gap_x
+    used_height = num_y * panel_height + (num_y - 1) * gap_y
+
+    offset_x = (width - used_width) / 2
+    offset_y = (height - used_height) / 2
+
+    start_x = minx + offset_x
+    start_y = miny + offset_y
+
+    # Xếp panel như cũ, nhưng bắt đầu từ offset (centered)
+    y = start_y
+    for _ in range(num_y):
+        x = start_x
+        row = []
+        for _ in range(num_x):
+            panel = Polygon([
+                (x, y),
+                (x + panel_width, y),
+                (x + panel_width, y + panel_height),
+                (x, y + panel_height)
             ])
-            if rotated_polygon.contains(panel.buffer(-0.5)): # Kiểm tra xem panel có nằm trong mái nhà đã xoay không
-                # 5. Xoay panel ngược lại theo góc mái
-                test.append(panel)
-                real_panel = rotate(panel, angle_deg, origin=origin, use_radians=False) # Xoay panel về góc mái nhà ban đầu
-                placed_panels.append(real_panel) # Thêm panel đã xoay vào danh sách các panel đã được đặt lên mái nhà
-                
-            x += panel_width + gap_x # Di chuyển sang vị trí tiếp theo theo trục X
-        y += panel_height + gap_y # Di chuyển sang vị trí tiếp theo theo trục Y
+            if rotated_polygon.contains(panel):
+                real_panel = rotate(panel, angle_deg, origin=origin, use_radians=False)
+                placed_panels.append(real_panel)
+            x += panel_width + gap_x
+        y += panel_height + gap_y
+
 
     # 6. Convert kết quả sang lat/lng để hiển thị
     transformer = Transformer.from_crs("EPSG:32648", "EPSG:4326", always_xy=True)
@@ -222,6 +241,26 @@ def generate_panel_grid(
     return panels_latlng # Trả về danh sách các panel đã được xoay và chuyển đổi sang lat/lng để hiển thị trên bản đồ
 
 
+def find_best_orientation_limited(polygon_meters, panel_width, panel_height, angle_deg):
+    candidates = [
+        angle_deg,
+        (angle_deg + 90) % 180
+    ]
+    
+    best_angle = None
+    best_panels = []
+    max_count = 0
+
+    for angle in candidates:
+        panels = generate_panel_grid(
+            polygon_meters, panel_width, panel_height, angle
+        )
+        if len(panels) > max_count:
+            max_count = len(panels)
+            best_angle = angle
+            best_panels = panels
+
+    return best_angle, best_panels
 
 
 
@@ -246,12 +285,13 @@ async def get_panel_map(polygon: PolygonRequest):
     print("count panel:", best_panel["count"])  # Debugging output
 
     # Tính vị trí các panel trên mái nhà
-    panels_latlng = generate_panel_grid(
-        shrunken, 
+    best_angle, panels_latlng = find_best_orientation_limited(
+        shrunken,
         best_panel["panel"]["width"],
         best_panel["panel"]["height"],
-        angle_deg,
+        angle_deg
     )
+
 
     result = {
         "area_m2": shrunken.area,
@@ -269,6 +309,7 @@ async def get_panel_map(polygon: PolygonRequest):
             "coverage": best_panel["coverage"]
         },
         "panels_latlng": panels_latlng,  # Vị trí các panel trên mái nhà
+        "best_angle": best_angle,  # Góc xoay tốt nhất của panel
     }
     
     return result
