@@ -77,7 +77,7 @@ def roof_area(coords):
     # Tính góc của mái nhà, dùng để xoay panel sau này
     # Lấy 2 điểm đầu tiên của polygon để tính góc
     # Giả sử mái nhà là hình chữ nhật, lấy 2 điểm đầu tiên để tính góc
-    coords = list(polygon_meters.exterior.coords)
+    coords = list(min_rect.exterior.coords)
     x1, y1 = coords[0] # Lấy điểm đầu tiên
     x2, y2 = coords[1] # Lấy điểm thứ hai
     angle_rad = atan2(y2 - y1, x2 - x1) # Tính góc giữa 2 điểm theo radian
@@ -235,6 +235,22 @@ def generate_panel_grid(
             lon, lat = transformer.transform(x, y)
             transformed_coords.append({"lat": lat, "lng": lon})
         panels_latlng.append(transformed_coords)
+
+    # for panel in placed_panels:
+    #     transformed_coords = []
+    #     for x, y in panel.exterior.coords:
+    #         lon, lat = transformer.transform(x, y)
+    #         transformed_coords.append({"lat": lat, "lng": lon})
+
+    #     # 👉 Convert centroid to lat/lng before sending
+    #     cx, cy = panel.centroid.coords[0]
+    #     center_lng, center_lat = transformer.transform(cx, cy)
+
+    #     panels_latlng.append({
+    #         "coords": transformed_coords,
+    #         "center": {"lat": center_lat, "lng": center_lng}
+    #     })
+
         
 
     print("Generated panels:", len(panels_latlng))
