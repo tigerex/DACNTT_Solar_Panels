@@ -25,8 +25,15 @@ Chạy chương trình bằng web
 Thêm vô đây please
 
 ## BackEnd Document:
-**Do it**
-
+Tạo môi trường ảo như hướng dẫn dưới phần `Model`
+Cài các module/thư viện bla bla.
+```bash
+pip install -r /path/to/requirements.txt
+```
+Sau đó khởi chạy server.
+```bash
+uvicorn main:app --reload
+```
 ## Model Training Document:
 Thấy cái folder *.venv* trên cùng trong folder root khom?  
 ![Look!](image-1.png)  
