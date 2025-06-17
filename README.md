@@ -20,12 +20,12 @@ Cài đặt các package cho PhongEnd
 ```
 Chạy chương trình bằng web
 ```bash
-    npm run 
+    npm run dev
 ```
 Thêm vô đây please
 
 ## BackEnd Document:
-Tạo môi trường ảo như hướng dẫn dưới phần `Model`
+Tạo môi trường ảo như hướng dẫn dưới phần `Model`.  
 Cài các module/thư viện bla bla.
 ```bash
 pip install -r /path/to/requirements.txt
@@ -43,7 +43,7 @@ Nhưng mà môi trường ảo vẫn nằm trên pc??? SHUT UP TUI KHÔNG BIẾT
 **OH NO không có folder .venv nào hết!!! Không sao, tự tạo thôi.**
 
 1. Đứng tại folder root (vì tui thiết kế file như vậy rồi, tạo ở chỗ khác không được ráng chịu)
-2. CCái venv là môi trường ảo, cái venv sau đó là tên cho cái môi trường ảo đó, đổi tên tùy ý
+2. Cái `venv` đầu là môi trường ảo, cái venv sau đó là tên cho cái môi trường ảo đó, đổi tên tùy ý
 ```bash 
     python -m venv venv
 ``` 
