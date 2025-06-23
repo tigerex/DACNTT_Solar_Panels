@@ -1,19 +1,28 @@
 import os
-import math
-import base64
-import requests
-from io import BytesIO
-from PIL import Image
+# import base64
+# import requests
+# from io import BytesIO
+# from PIL import Image
+
 from dotenv import load_dotenv
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
-import math
+
+# import math
+from math import atan2, degrees
+
 from pydantic import BaseModel
+
 from shapely.geometry import Polygon, box
 from shapely.ops import transform
+from shapely.affinity import rotate, translate
+
 from pyproj import Transformer
 
+from typing import List
+
 from . import panel_type
+
 
 # Load biến môi trường
 load_dotenv()
@@ -30,17 +39,9 @@ class Coordinate(BaseModel):
 
 class PolygonRequest(BaseModel):
     coordinates: list[Coordinate]
+    polygon_id: int | None = None  # ID của polygon, có thể là None
 
 # ==== Helper Functions ====
-
-
-from shapely.geometry import Polygon
-from shapely.affinity import rotate, translate
-import matplotlib.pyplot as plt
-from math import atan2, degrees
-
-
-
 # Hàm chuyển polygon từ đơn vị lat/lng → mét
 # Tại sao cần chuyển về mét?
 # Vì diện tích tính bằng mét vuông, và các phép toán hình học trên polygon cần sử dụng hệ mét để chính xác hơn
@@ -83,7 +84,8 @@ def roof_area(coords):
     angle_rad = atan2(y2 - y1, x2 - x1) # Tính góc giữa 2 điểm theo radian
     angle_deg = degrees(angle_rad)  # Chuyển đổi góc sang độ
 
-    print("Angle in degrees:", angle_deg)  # Debugging output
+    print("\nAngle in degrees:", angle_deg)  # Debugging output
+    print("\n")
 
 
 
@@ -102,10 +104,11 @@ def roof_area(coords):
 
 
     # And BOOM, có diện tích, ngoài ra còn cung cấp bounds để tính vị trí xếp panel trên mái
-    print("Polygon valid:", shrunken.is_valid)
+    print("\nPolygon valid:", shrunken.is_valid)
     print("Area m²:", shrunken.area)
     print("Bounds:", shrunken.bounds)
     print("real_area m²:", real_area)
+    print("\n")
 
     return shrunken, shrunken_coords, center_lat, center_lng, angle_deg # shrunken là polygon đã đổi thành mét để shrink và tính diện tích. 
             # shrunken_coords là tọa độ polygon của mái nhà đã được shrink và chuyển đổi sang lat/lng lạilại để trả về cho frontend
@@ -147,14 +150,6 @@ def choose_best_panel_type(area):
     return best_panel # Return panel tốt nhất với độ phủ lớn nhất cho bước tính panel position (sắp xếp vị trí các panel) tiếp theo
  
 
-
-from shapely.geometry import Polygon
-from typing import List
-from shapely.geometry import Polygon
-from shapely.affinity import rotate
-from pyproj import Transformer
-from typing import List
-from math import atan2, degrees
 
 
 # Tính vị trí các panel trên mái nhà
@@ -275,7 +270,8 @@ def find_best_orientation_limited(polygon_meters, panel_width, panel_height, ang
             max_count = len(panels)
             best_angle = angle
             best_panels = panels
-
+    print("\nBest angle:", best_angle, "with", max_count, "panels")
+    print("\n")
     return best_angle, best_panels
 
 
@@ -283,54 +279,72 @@ def find_best_orientation_limited(polygon_meters, panel_width, panel_height, ang
 # ==== API Endpoints ====
 # Endpoint để nhận tọa độ polygon từ frontend và trả về vị trí panel
 @router.post("/api/polygon")
+# async def get_panel_map(polygon: PolygonRequest):
 async def get_panel_map(polygon: PolygonRequest):
-    coords = polygon.coordinates # Lấy tọa độ từ request body
-    if len(coords) != 4: # Kiểm tra xem có đủ 4 tọa độ không
-        return JSONResponse(content={"error": "Need 4 coordinates for a quadrilateral"}, status_code=400)
+    body = polygon # Lấy tọa độ từ request body
+    coords = body.coordinates # Lấy tọa độ từ request body, mặc định là mảng rỗng
+    id = body.polygon_id # Lấy id của polygon từ request body, mặc định là None
+    if len(coords) < 3: # Kiểm tra xem có đủ 4 tọa độ không
+        return JSONResponse(content={"error": "Cần ít nhất 3 góc!!!"}, status_code=401)
 
+    print("\nReceived polygon ID:", id)  # Debugging output
     print("Received coordinates:", coords)
-    print(coords[0].lat, coords[0].lng)  # Debugging output
-
+    print("\n")
     
     # B1. Shrink polygon để tránh các vấn đề về méo mó và tính diện tích
-    shrunken, shrunken_coords, center_lat, center_lng, angle_deg = roof_area(coords) # Tính diện tích mái nhà và chuyển đổi sang mét
-
+    try:
+        shrunken, shrunken_coords, center_lat, center_lng, angle_deg = roof_area(coords) # Tính diện tích mái nhà và chuyển đổi sang mét
+    except Exception as e:
+        print("Error processing polygon:", e)
     # B2. Chọn panel tốt nhất dựa trên diện tích mái nhà
-    best_panel = choose_best_panel_type(shrunken.area) # Chọn panel tốt nhất dựa trên diện tích mái nhà
+    try:
+        best_panel = choose_best_panel_type(shrunken.area) # Chọn panel tốt nhất dựa trên diện tích mái nhà
+    except Exception as e:
+        print("Error choosing best panel type:", e)
 
     print("count panel:", best_panel["count"])  # Debugging output
 
+    try:
     # Tính vị trí các panel trên mái nhà
-    best_angle, panels_latlng = find_best_orientation_limited(
-        shrunken,
-        best_panel["panel"]["width"],
-        best_panel["panel"]["height"],
-        angle_deg
-    )
+        best_angle, panels_latlng = find_best_orientation_limited(
+            shrunken,
+            best_panel["panel"]["width"],
+            best_panel["panel"]["height"],
+            angle_deg
+        )
+    except Exception as e:
+        print("Error generating panel grid:", e)
 
+    try:
+        result = {
+            "area_m2": shrunken.area,
+            "shrunken_polygon": shrunken_coords,  # Tọa độ polygon đã được shrink và chuyển sang pixel
+            "center_lat": center_lat,  # Tọa độ trung tâm của polygon đã được shrink
+            "center_lng": center_lng,  # Tọa độ trung tâm của polygon đã được shrink
+            "best_panel": {
+                "model": best_panel["panel"]["model"],
+                "panel_width": best_panel["panel"]["width"],
+                "panel_height": best_panel["panel"]["height"],
+                "panel_power": best_panel["panel"]["power"],
+                "panel_price": best_panel["panel"]["price_vnd"],
+                "panel_image": best_panel["panel"]["image"],
+                "count": best_panel["count"],
+                "coverage": best_panel["coverage"]
+            },
+            # "panels_latlng": panels_latlng,  # Vị trí các panel trên mái nhà
+            "best_angle": best_angle,  # Góc xoay tốt nhất của panel
+        }
+    except Exception as e:
+        print("Error preparing result:", e)
 
-    result = {
-        "area_m2": shrunken.area,
-        "shrunken_polygon": shrunken_coords,  # Tọa độ polygon đã được shrink và chuyển sang pixel
-        "center_lat": center_lat,  # Tọa độ trung tâm của polygon đã được shrink
-        "center_lng": center_lng,  # Tọa độ trung tâm của polygon đã được shrink
-        "best_panel": {
-            "model": best_panel["panel"]["model"],
-            "panel_width": best_panel["panel"]["width"],
-            "panel_height": best_panel["panel"]["height"],
-            "panel_power": best_panel["panel"]["power"],
-            "panel_price": best_panel["panel"]["price_vnd"],
-            "panel_image": best_panel["panel"]["image"],
-            "count": best_panel["count"],
-            "coverage": best_panel["coverage"]
-        },
-        "panels_latlng": panels_latlng,  # Vị trí các panel trên mái nhà
-        "best_angle": best_angle,  # Góc xoay tốt nhất của panel
-    }
-    
-    return result
+    print("\nResult:", result)  # Debugging output
+    print("\n")
+    return body
 
-
+@router.get("/api/test")
+async def test_endpoint():
+    # Test endpoint để kiểm tra xem API có hoạt động không
+    return {"message": "API is working!"}
 
 
 
