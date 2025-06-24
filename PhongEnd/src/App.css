@@ -17,6 +17,7 @@
 }
 
 .button {
+  margin: 2px;
   padding: 8px 16px;
   position: relative;
   font-size: 14px;
@@ -56,4 +57,12 @@
 
 #edit-button:hover{
   background-color: #45a049; /* darker green on hover */
+}
+
+#center-button{
+  background-color: #2196F3; /* blue */
+}
+
+#center-button:hover{
+  background-color: #1976D2; /* darker blue on hover */
 }

@@ -12,186 +12,202 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import HybridPanelOverlay from "./components/HybridPanelOverlay";
 import { getDistance } from "geolib";
 
-// Định nghĩa các style
+// Định nghĩa các style, không cần nữa do có CSS riêng, nhưng tui thích để 2 thằng này ở đây :D
 const containerStyle = {
   width: "100vw",
   height: "100vh",
 };
 
-const center = { lat: 10.7626, lng: 106.6602 };
+const center = { lat: 10.7626, lng: 106.6602 };  // Vị trí trung tâm của bản đồ, mỗi lần load sẽ hiện ở đây.
 
 function App() {
-  const [marker, setMarker] = useState(null);
-  const [polygonPath, setPolygonPath] = useState([]);
-  const polygonRef = useRef(null);
-  const mapRef = useRef(null); // để dùng panTo (optional)
-  const deleteMenuRef = useRef(null);
-  const inputRef = useRef(null);
-  const autocompleteRef = useRef(null);
-  const [googleLoaded, setGoogleLoaded] = useState(false);
+  const [marker, setMarker] = useState(null);                             // Vị trí marker hiện tại
+  const [polygonPath, setPolygonPath] = useState([]);                     // Lưu trữ tọa độ của polygon đã vẽ
+  const polygonRef = useRef(null);                                        // để lưu trữ polygon hiện tại, dùng để chỉnh sửa sau này
+  const mapRef = useRef(null);                                            // để dùng panTo (optional)
+  const deleteMenuRef = useRef(null);                                     // Lưu trữ menu xóa góc polygon
+  const inputRef = useRef(null);                                          // Tham chiếu đến input tìm kiếm địa chỉ
+  const autocompleteRef = useRef(null);                                   // Tham chiếu đến Autocomplete để lấy địa điểm đã chọn
+  const [googleLoaded, setGoogleLoaded] = useState(false);                // Biến để kiểm tra xem Google Maps API đã được nạp hay chưa
 
-  const [showResult, setShowResult] = useState(false);
-  const [polygonResults, setPolygonResults] = useState({});
+  const [showResult, setShowResult] = useState(false);                    // Biến để kiểm tra xem có hiển thị kết quả tính toán diện tích và panel hay không
+  const [polygonResults, setPolygonResults] = useState({});               // Lưu trữ kết quả tính toán diện tích và panel cho từng polygon, key là polygon_id
 
   // const [data, setData] = useState(null);
 
-  const [zoom, setZoom] = useState(18);
+  const [zoom, setZoom] = useState(18);                                   // Cấp độ zoom ban đầu của bản đồ
 
-  const [polygons, setPolygons] = useState([]); // Danh sách các polygon đã vẽ
+  const [polygons, setPolygons] = useState([]);                           // Danh sách các polygon đã vẽ
   const [selectedPolygonIndex, setSelectedPolygonIndex] = useState(null); // Chỉ số của polygon được chọn
-  const [editMode, setEditMode] = useState(false); // Chế độ chỉnh sửa polygon
+  const [editMode, setEditMode] = useState(false);                        // Chế độ chỉnh sửa polygon
+
+  const [sunlightHours, setSunlightHours] = useState(5);                // Số giờ nắng trung bình mỗi ngày, mặc định là 4.5 giờ 
+
   
-  const onLoadPolygon = (polygon, path) => {
-    polygonRef.current = polygon;
-    polygonRef.path = path
+  const onLoadPolygon = (polygon, path) => {  // Hàm này sẽ được gọi khi polygon được tải xong
+    polygonRef.current = polygon;             // Lưu tham chiếu đến polygon để có thể chỉnh sửa sau này
+    polygonRef.path = path 
   };
 
+  // Hàm này sẽ được gọi khi bản đồ được tải xong
   const onLoadMap = (map) => {
-    mapRef.current = map;
+    mapRef.current = map; // Lưu tham chiếu đến bản đồ để có thể sử dụng sau này
 
     if (!googleLoaded) {
+      // Tạo lớp OverlayView để hiển thị menu xóa góc
       class DeleteMenu extends window.google.maps.OverlayView {
         constructor() {
           super();
-          this.div_ = document.createElement("div");
-          this.div_.className = "delete-menu";
-          this.div_.innerHTML = "Delete";
-          this.div_.style.position = "absolute";
-          this.div_.style.background = "#f44336";
-          this.div_.style.color = "#fff";
-          this.div_.style.padding = "4px 8px";
-          this.div_.style.fontSize = "12px";
-          this.div_.style.borderRadius = "4px";
-          this.div_.style.cursor = "pointer";
-          this.div_.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
-          this.div_.style.zIndex = "10000";
+          this.div_ = document.createElement("div");                  // Tạo một div để chứa menu
+          this.div_.className = "delete-menu";                        // Thêm class để có thể style dễ dàng
+          this.div_.innerHTML = "Delete";                             // Nội dung của menu
+          this.div_.style.position = "absolute";                      // Style thoai
+          this.div_.style.background = "#f44336";                     // Màu
+          this.div_.style.color = "#fff";                             // Màu chữ
+          this.div_.style.padding = "4px 8px";                        // Padding
+          this.div_.style.fontSize = "12px";                          // Font size
+          this.div_.style.borderRadius = "4px";                       // Bo tròn góc
+          this.div_.style.cursor = "pointer";                         // Con trỏ chuột
+          this.div_.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";  // Đổ bóng
+          this.div_.style.zIndex = "10000";                           // Đặt z-index cao để hiển thị trên các đối tượng khác
 
 
           const menu = this;
-          window.google.maps.event.addDomListener(this.div_, "click", () => {
-            menu.removeVertex();
+          window.google.maps.event.addDomListener(this.div_, "click", () => { // Thêm sự kiện click để xóa góc
+            menu.removeVertex(); // Gọi hàm xóa góc
           });
         }
 
+        // Hàm này sẽ được gọi khi menu được thêm vào bản đồ
         onAdd() {
-          const deleteMenu = this;
+          const deleteMenu = this; 
           const map = this.getMap();
-
+          // Kiểm tra xem bản đồ đã được tải chưa
           this.getPanes().floatPane.appendChild(this.div_);
-          this.divListener_ = window.google.maps.event.addDomListener(
+          this.divListener_ = window.google.maps.event.addDomListener( // Thêm listener để đóng menu khi click ra ngoài
             map.getDiv(),
-            "mousedown",
+            "mousedown", // Thêm sự kiện mousedown để đóng menu khi click ra ngoài
             (e) => {
               if (e.target !== deleteMenu.div_) {
-                deleteMenu.close();
+                deleteMenu.close(); // Gọi hàm close để ẩn menu
               }
             },
-            true
+            true // true để sự kiện này được xử lý trước các sự kiện khác
           );
         }
-
+        
+        // Hàm này sẽ được gọi khi menu bị xóa khỏi bản đồ
         onRemove() {
           if (this.divListener_) {
-            window.google.maps.event.removeListener(this.divListener_);
+            window.google.maps.event.removeListener(this.divListener_); // Xóa listener để tránh rò rỉ bộ nhớ
           }
           if (this.div_ && this.div_.parentNode) {
-            this.div_.parentNode.removeChild(this.div_);
+            this.div_.parentNode.removeChild(this.div_); // Xóa div khỏi DOM
           }
-          this.set("position", null);
-          this.set("path", null);
-          this.set("vertex", null);
+          this.set("position", null); // Reset position
+          this.set("path", null);     // Reset path
+          this.set("vertex", null);   // Reset vertex
         }
 
+        // Hàm này sẽ được gọi để vẽ menu lên bản đồ
         draw() {
-          const position = this.get("position");
-          const projection = this.getProjection();
+          const position = this.get("position");  // Lấy vị trí của góc polygon
+          const projection = this.getProjection();// Lấy projection của bản đồ
 
-          if (!position || !projection) return;
+          if (!position || !projection) return;   // Nếu không có vị trí hoặc projection thì không vẽ gì cả
 
-          const point = projection.fromLatLngToDivPixel(position);
-          this.div_.style.top = (point.y - 10) + "px";  // Move slightly up
-          this.div_.style.left = (point.x + 10) + "px"; // Move slightly right
+          const point = projection.fromLatLngToDivPixel(position); // Chuyển đổi vị trí từ LatLng sang pixel
+          this.div_.style.top = (point.y - 10) + "px";  // Di chuyển lên trên một chút
+          this.div_.style.left = (point.x + 10) + "px"; // Di chuyển sang bên phải một chút
 
         }
 
+        // Hàm này sẽ được gọi để mở menu
         open(map, path, vertex) {
-          this.set("position", path.getAt(vertex));
-          this.set("path", path);
-          this.set("vertex", vertex);
-          this.setMap(map);
+          this.set("position", path.getAt(vertex)); // Lấy vị trí của góc polygon
+          this.set("path", path);                   // Lưu trữ đường dẫn của polygon
+          this.set("vertex", vertex);               // Lưu trữ chỉ số của góc polygon
+          this.setMap(map);                         // Hiển thị menu trên bản đồ
           this.draw();
         }
-
+        // Hàm này sẽ được gọi để xóa góc polygon
         removeVertex() {
-          const path = this.get("path");
-          const vertex = this.get("vertex");
+          const path = this.get("path");            // Lấy đường dẫn của polygon
+          const vertex = this.get("vertex");        // Lấy chỉ số của góc polygon
 
           if (path && vertex !== undefined) {
-            path.removeAt(vertex);
+            path.removeAt(vertex); // Xóa góc polygon tại chỉ số vertex
           }
           this.close();
         }
-
+        // Hàm này sẽ được gọi để đóng menu
         close() {
           this.setMap(null);
         }
       }
-
+      // Tạo một instance của DeleteMenu và lưu vào ref để sử dụng sau này
       deleteMenuRef.current = new DeleteMenu();
-      setGoogleLoaded(true);
+      setGoogleLoaded(true); // Đánh dấu là đã nạp Google Maps API
     }
   };
 
+  // useEffect là một hook của React, dùng để thực hiện side effects trong component
+  // Trong trường hợp này, nó sẽ được gọi khi polygonRef hoặc mapRef thay đổi
   useEffect(() => {
-    if (polygonRef.current && mapRef.current) {
-      const path = polygonRef.current.getPath();
-      if (!deleteMenuRef.current) {
-        deleteMenuRef.current = new DeleteMenu();
+    if (polygonRef.current && mapRef.current) {       // Kiểm tra xem polygonRef và mapRef đã được khởi tạo chưa
+      const path = polygonRef.current.getPath();      // Lấy đường dẫn của polygon hiện tại
+      if (!deleteMenuRef.current) {                   // Nếu chưa có DeleteMenu thì tạo mới
+        deleteMenuRef.current = new DeleteMenu();     // Tạo một instance của DeleteMenu
       }
 
-      const listener = window.google.maps.event.addListener(
+      const listener = window.google.maps.event.addListener( // Thêm listener để mở menu xóa góc khi click chuột phải vào góc polygon
         polygonRef.current,
         "contextmenu",
         (e) => {
-          if (e.vertex == undefined) return;
-          deleteMenuRef.current.open(mapRef.current, path, e.vertex);
+          if (e.vertex == undefined) return;                            // Nếu không phải là góc polygon thì không làm gì cả
+          deleteMenuRef.current.open(mapRef.current, path, e.vertex);   // Mở menu xóa góc tại vị trí của góc polygon
         }
       );
 
       return () => {
-        window.google.maps.event.removeListener(listener);
+        window.google.maps.event.removeListener(listener); // Xóa listener khi unmount
       };
     }
-  }, [polygonRef.current]);
+  }, [polygonRef.current]); // Chỉ chạy khi polygonRef.current thay đổi
 
-  const selectedResult = useMemo(() => {
-    if (selectedPolygonIndex === null) return null;
-    return polygonResults[selectedPolygonIndex];
-  }, [polygonResults, selectedPolygonIndex]);
+  // Hàm này dùng Memo để tối ưu hiệu suất, chỉ tính toán lại khi polygonResults hoặc selectedPolygonIndex thay đổi
+  // selectedResult sẽ chứa kết quả của polygon đang được chọn
+  const selectedResult = useMemo(() => {          
+    if (selectedPolygonIndex === null) return null; // Nếu không có polygon nào được chọn thì trả về null
+    return polygonResults[selectedPolygonIndex];    // Trả về kết quả của polygon đang được chọn
+  }, [polygonResults, selectedPolygonIndex]);       // Theo dõi sự thay đổi của polygonResults và selectedPolygonIndex
 
+  // Lại thêm một useMemo để render các panel từ selectedResult
+  // Chỉ render lại khi selectedResult.panels_latlng thay đổi
   const renderedPanels = useMemo(() => {
-    if (!selectedResult ?.panels_latlng?.length) return null;
+    if (!selectedResult ?.panels_latlng?.length) return null;         // Nếu không có panels_latlng thì không render gì cả
 
-    return selectedResult .panels_latlng.map((panelCoords, idx) => (
+    return selectedResult .panels_latlng.map((panelCoords, idx) => (  // Duyệt qua từng panel trong panels_latlng
       <Polygon
         key={idx}
         path={panelCoords}
         options={{
-          fillColor: "#00AA00",
+          fillColor: "#00AA00", // Màu xanh lá cây
           fillOpacity: 0.3,
-          strokeColor: "#00AA00",
+          strokeColor: "#00AA00", // Viền màu xanh lá cây
           strokeOpacity: 0.8,
           strokeWeight: 1,
         }}
       />
     ));
-  }, [selectedResult ?.panels_latlng]); // chỉ render lại khi panels_latlng thay đổi
+  }, [selectedResult ?.panels_latlng]); // Theo dõi sự thay đổi của selectedResult.panels_latlng
 
+  // Lại lại  một useMemo nữa để render các panel overlay từ selectedResult
   const renderedOverlayPanels = useMemo(() => {
-    if (!selectedResult ?.panels_latlng?.length) return null;
+    if (!selectedResult ?.panels_latlng?.length) return null; // Nếu không có panels_latlng thì không render gì cả
 
-    return selectedResult .panels_latlng.map((panelCoords, idx) => (
-      <HybridPanelOverlay
+    return selectedResult .panels_latlng.map((panelCoords, idx) => ( // Duyệt qua từng panel trong panels_latlng
+      <HybridPanelOverlay // Compenent của QUân
         key={idx}
         panelCoords={panelCoords}
         angle={selectedResult .best_angle}
@@ -206,7 +222,7 @@ function App() {
     selectedResult ?.best_panel?.panel_width,
     selectedResult ?.best_panel?.panel_height,
     zoom
-  ]);
+  ]); // Theo dõi mấy bé này
 
 // Hàm di chuyển bản đồ đến vị trí mới và cập nhật marker
   const moveTo = (lat, lng) => {
@@ -228,9 +244,6 @@ function App() {
   };
 
   // =========================================================================================================================
-
-  // Chủ yếu là đang làm cái này nè, gửi polygon về backend
-  // Để vẽ panel lên
   // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend chỉ để tính diện tích
   const handlePolygonComplete = (poly) => {
     const path = poly.getPath().getArray().map(latLng => ({
@@ -289,7 +302,7 @@ function App() {
         .then((result) => {
           const { polygon_id } = result;
           
-          // Save result polygon
+          // Lưu kết quả trả về theo polygon_id
           setPolygonResults((prev) => ({
             ...prev,
             [polygon_id]: result,
@@ -301,6 +314,18 @@ function App() {
         .catch((err) => console.error("Lỗi khi gửi polygon:", err));
     }
   };
+
+  const centerPolygonOnMap = () => {
+    if (selectedPolygonIndex !== null && polygons[selectedPolygonIndex]) {
+      const bounds = new window.google.maps.LatLngBounds();
+      polygons[selectedPolygonIndex].forEach(coord => {
+        bounds.extend(new window.google.maps.LatLng(coord.lat, coord.lng));
+      });
+
+      mapRef.current.fitBounds(bounds);
+    }
+  };
+
 
 
   // =========================================================================================================================
@@ -404,61 +429,115 @@ function App() {
         ))}
 
         {selectedPolygonIndex !== null && (
-          <div style={{ position: "absolute", top: 60, left: 10, zIndex: 1000, background: "rgba(0, 0, 0, 0.57)", padding: "10px", borderRadius: "6px" }}>
-            <div style={{ marginBottom: "6px", fontWeight: "bold" }}>
+          <div
+            style={{
+              position: "absolute",
+              top: 60,
+              left: 10,
+              zIndex: 1000,
+              background: "rgba(0, 0, 0, 0.57)",
+              padding: "10px",
+              borderRadius: "6px",
+              color: "#fff",
+              minWidth: "260px"
+            }}
+          >
+            <div style={{ marginBottom: "6px", fontWeight: "bold"}}>
               Thông tin polygon #{selectedPolygonIndex}
             </div>
-            {/* Hiển thị diện tích và các thông tin khác của polygon đã chọn: */}
+
             {polygonResults[selectedPolygonIndex]?.area_m2 && (
-            <div style={{ marginBottom: "10px" }}>
-              Diện tích: {polygonResults[selectedPolygonIndex].area_m2.toFixed(2)} m²
-            </div>
-            )}
-            {polygonResults[selectedPolygonIndex]?.best_panel && (
-            <div style={{ marginBottom: "10px" }}>
-              Panel tốt nhất: {polygonResults[selectedPolygonIndex].best_panel.panel_width}m x {polygonResults[selectedPolygonIndex].best_panel.panel_height}m
-            </div>
+              <div style={{ marginBottom: "10px" }}>
+                <strong>Diện tích:</strong> {polygonResults[selectedPolygonIndex].area_m2.toFixed(2)} m²
+              </div>
             )}
 
-            {!editMode && (
-              <button 
-                onClick={() => setEditMode(true)}
-                className="button" id="edit-button"
-              >
+            {polygonResults[selectedPolygonIndex]?.best_panel && (() => {
+              const bp = polygonResults[selectedPolygonIndex].best_panel;
+              const totalBestPower = bp.count * bp.panel_best_power;
+              const totalNormalPower = bp.count * bp.panel_normal_power;
+              const totalPrice = bp.count * bp.panel_price;
+
+              return (
+                <div style={{ marginBottom: "10px", lineHeight: "1.6" }}>
+                  {/* BẢNG THÔNG TIN KỸ THUẬT TẤM PIN */}
+                  <div style={{ padding: "10px", background: "#303030", borderRadius: "6px", marginBottom: "12px" }}>
+                    <div style={{ fontWeight: "bold", marginBottom: "6px" }}>🔧 Thông số kỹ thuật pin năng lượng mặt trời</div>
+                    <div><strong>Model:</strong> {bp.model}</div>
+                    <div><strong>Kích thước:</strong> {(bp.panel_width * 1000).toFixed(0)}mm × {(bp.panel_height * 1000).toFixed(0)}mm</div>
+                    <div><strong>Công suất tối đa (STC*):</strong> {bp.panel_best_power} W</div>
+                    <div><strong>Công suất thông thường (NOCT*):</strong> {bp.panel_normal_power} W</div>
+                    <div><strong>Đơn giá mỗi tấm:</strong> {bp.panel_price.toLocaleString()} VND</div>
+                  </div>
+
+                  {/* BẢNG THÔNG TIN THEO POLYGON */}
+                  <div style={{ padding: "10px", background: "#303030", borderRadius: "6px" }}>
+                    <div style={{ fontWeight: "bold", marginBottom: "6px" }}>📊 Thống kê cho polygon #{selectedPolygonIndex}</div>
+                    <div><strong>Số lượng tấm:</strong> {bp.count}</div>
+                    <div><strong>Công suất tổng khả thi (STC*):</strong> {totalBestPower.toFixed(2)} W</div>
+                    <div><strong>Công suất tổng thông thường (NOCT*):</strong> {totalNormalPower.toFixed(2)} W</div>
+                    <div><strong>Điện năng tối đa/ngày:</strong> {(bp.count * bp.panel_best_power * sunlightHours  * 0.8 / 1000).toFixed(2)} kWh</div> {/* giả sử 4.5 giờ nắng và hiệu suất 80% */}
+                    <div><strong>Điện năng trung bình/ngày:</strong> {(bp.count * bp.panel_normal_power * sunlightHours  * 0.8 / 1000).toFixed(2)} kWh</div> {/* giả sử 4.5 giờ nắng và hiệu suất 80% */}
+                    <div><strong>Tổng giá:</strong> {totalPrice.toLocaleString()} VND</div>
+                  </div>
+
+                  <div style={{ marginBottom: "10px" }}>
+                    <label htmlFor="sun-slider" style={{ fontWeight: "bold" }}>☀️ Số giờ nắng trung bình mỗi ngày:</label>
+                    <input
+                      id="sun-slider"
+                      type="range"
+                      min="1"
+                      max="8"
+                      step="0.1"
+                      value={sunlightHours}
+                      onChange={(e) => setSunlightHours(parseFloat(e.target.value))}
+                      style={{ width: "100%", marginTop: "5px" }}
+                    />
+                    <div style={{ textAlign: "right", fontSize: "14px", color: "#ffc107" }}>
+                      {sunlightHours.toFixed(1)} giờ
+                    </div>
+                  </div>
+                </div>
+
+              );
+            })()}
+
+            {/* Nút chỉnh sửa / xác nhận */}
+            {!editMode ? (
+              <button onClick={() => setEditMode(true)} className="button" id="edit-button">
                 Chỉnh Sửa
               </button>
-            )}
-            {editMode && (
-              <button 
+            ) : (
+              <button
                 onClick={() => {
                   if (polygonRef.current) {
                     const newPath = polygonRef.current.getPath().getArray().map((latLng) => ({
                       lat: latLng.lat(),
                       lng: latLng.lng()
                     }));
-
-                    // Cập nhật polygon hiện tại trong danh sách
-                    setPolygons(prev => {
+                    setPolygons((prev) => {
                       const updated = [...prev];
                       updated[selectedPolygonIndex] = newPath;
                       return updated;
                     });
-
                     console.log("Đã cập nhật polygon:", selectedPolygonIndex);
                   }
                   setEditMode(false);
                 }}
-                className="button" id="confirm-edit-button"
+                className="button"
+                id="confirm-edit-button"
               >
                 Xác Nhận
               </button>
             )}
-                        <button 
+
+            {/* Nút xoá */}
+            <button
               onClick={() => {
                 const newPolygons = polygons.filter((_, idx) => idx !== selectedPolygonIndex);
-                setPolygons(newPolygons);
 
-                setPolygonResults(prev => {
+                setPolygons(newPolygons);
+                setPolygonResults((prev) => {
                   const newResults = { ...prev };
                   delete newResults[selectedPolygonIndex];
                   return newResults;
@@ -467,43 +546,38 @@ function App() {
                 setSelectedPolygonIndex(null);
                 setEditMode(false);
                 console.log("Polygon deleted, ID: ", selectedPolygonIndex);
-            }}
-              className="button button-danger" id ="delete-button"
+              }}
+              className="button button-danger"
+              id="delete-button"
             >
               Xóa
             </button>
-            <button 
-              onClick={() => {HandleSentPolygon();}}
-              className="button" id="send-button"
+
+            {/* Nút gửi backend */}
+            <button
+              onClick={() => {
+                HandleSentPolygon();
+              }}
+              className="button"
+              id="send-button"
             >
               Gắn Panel
             </button>
+
+            {/* Nút canh giữa bản đồ */}
+            <button
+              onClick={centerPolygonOnMap}
+              className="button"
+              id="center-button"
+              style={{ marginTop: "10px" }}
+            >
+              Đi đến
+            </button>
+
           </div>
         )}
 
-        {/* Polygon vẽ bởi người dùng
-        {(!data?.shrunken_polygon || data.shrunken_polygon.length === 0) && polygonPath.length > 0 &&
-          (console.log("shrunken_polygon 1"),
-          (
-            <Polygon
-              path={polygonPath}
-              options={{ fillColor: "#00F", fillOpacity: 0.3 }}
-            />
-          ))}
-
-        {data?.shrunken_polygon == [] &&
-          polygonPath.length > 0 &&
-          (console.log("shrunken_polygon 2"),
-          (
-            <Polygon
-              path={polygonPath}
-              options={{ fillColor: "#00F", fillOpacity: 0.3 }}
-            />
-          ))} */}
-
-        
-        {/* Vẽ polygon từ dữ liệu backend đã gửi về, cái polygon đã được chỉnh sửa bởi backend */}
-        
+        {/* Hiển thị kết quả tính toán diện tích và panel nếu có */}
         {selectedResult?.shrunken_polygon && selectedResult.shrunken_polygon.length > 0 && (
           (
             <Polygon
