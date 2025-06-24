@@ -32,8 +32,8 @@ const HybridPanelOverlay = ({
 
 
 
-  console.log("Panel w:", panelWidthInMeters);
-  console.log("Panel h:", panelHeightInMeters);
+  // console.log("Panel w:", panelWidthInMeters);
+  // console.log("Panel h:", panelHeightInMeters);
 
   const scale = meterToPixelScale(zoom, lat); // Tính tỷ lệ pixel cho zoom hiện tại
   const width = panelWidthInMeters * scale; // Chiều rộng panel tính theo pixel
@@ -60,14 +60,14 @@ const HybridPanelOverlay = ({
         position={{ lat, lng }}
         mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
       >
-        {/* <div
+        <div
           style={{
             width: `${width + 2}px`,
             height: `${height + 5}px`,
-            backgroundColor: "#111", // nền đen đậm
+            backgroundColor: "#242424", // nền đen đậm
             backgroundImage: `
-              repeating-linear-gradient(to right, #ffffff22 0.5px, transparent 0.5px, transparent 6px),
-              linear-gradient(to bottom, transparent 49%, #ffffff33 49%, #ffffff33 51%, transparent 51%) 
+              repeating-linear-gradient(to right,#ffffff 0.5px, transparent 0.5px, transparent 6px),
+              linear-gradient(to bottom, transparent 50%,rgb(38, 0, 255) 20%,rgb(138, 0, 0) 100%, transparent 50%) 
             `,
             border: "1px solid #333",
             borderRadius: "2px",
@@ -78,8 +78,8 @@ const HybridPanelOverlay = ({
             pointerEvents: "none",
           }}
           title="Solar Panel"
-        /> */}
-        <div
+        />
+        {/* <div
           style={{
             width: `${width}px`,
             height: `${height}px`,
@@ -96,7 +96,7 @@ const HybridPanelOverlay = ({
             opacity: 0.9,
             pointerEvents: "none",
           }}
-        />
+        /> */}
 
       </OverlayView>
     </>

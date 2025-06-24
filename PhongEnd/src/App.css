@@ -1,6 +1,7 @@
 
 .search-input{
   position: absolute;
+  color: black;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
@@ -45,6 +46,14 @@
   background-color: #358037; /* green */
 }
 
+#confirm-edit-button:hover{
+  background-color: #4CAF50; /* lighter green on hover */
+}
+
 #edit-button{
-  background-color: #4CAF50; /* yellow */
+  background-color: #4CAF50; /* dark green */
+}
+
+#edit-button:hover{
+  background-color: #45a049; /* darker green on hover */
 }

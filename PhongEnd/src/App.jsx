@@ -7,7 +7,7 @@ import {
   Autocomplete,
 } from "@react-google-maps/api";
 import './App.css';
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 // import { OverlayView } from "@react-google-maps/api";
 import HybridPanelOverlay from "./components/HybridPanelOverlay";
 import { getDistance } from "geolib";
@@ -33,7 +33,7 @@ function App() {
   const [showResult, setShowResult] = useState(false);
   const [polygonResults, setPolygonResults] = useState({});
 
-  const [data, setData] = useState(null);
+  // const [data, setData] = useState(null);
 
   const [zoom, setZoom] = useState(18);
 
@@ -164,6 +164,50 @@ function App() {
     }
   }, [polygonRef.current]);
 
+  const selectedResult = useMemo(() => {
+    if (selectedPolygonIndex === null) return null;
+    return polygonResults[selectedPolygonIndex];
+  }, [polygonResults, selectedPolygonIndex]);
+
+  const renderedPanels = useMemo(() => {
+    if (!selectedResult ?.panels_latlng?.length) return null;
+
+    return selectedResult .panels_latlng.map((panelCoords, idx) => (
+      <Polygon
+        key={idx}
+        path={panelCoords}
+        options={{
+          fillColor: "#00AA00",
+          fillOpacity: 0.3,
+          strokeColor: "#00AA00",
+          strokeOpacity: 0.8,
+          strokeWeight: 1,
+        }}
+      />
+    ));
+  }, [selectedResult ?.panels_latlng]); // chỉ render lại khi panels_latlng thay đổi
+
+  const renderedOverlayPanels = useMemo(() => {
+    if (!selectedResult ?.panels_latlng?.length) return null;
+
+    return selectedResult .panels_latlng.map((panelCoords, idx) => (
+      <HybridPanelOverlay
+        key={idx}
+        panelCoords={panelCoords}
+        angle={selectedResult .best_angle}
+        zoom={zoom}
+        panelWidthInMeters={selectedResult .best_panel.panel_width}
+        panelHeightInMeters={selectedResult .best_panel.panel_height}
+      />
+    ));
+  }, [
+    selectedResult ?.panels_latlng,
+    selectedResult ?.best_angle,
+    selectedResult ?.best_panel?.panel_width,
+    selectedResult ?.best_panel?.panel_height,
+    zoom
+  ]);
+
 // Hàm di chuyển bản đồ đến vị trí mới và cập nhật marker
   const moveTo = (lat, lng) => {
     if (mapRef.current) {
@@ -183,50 +227,52 @@ function App() {
     moveTo(lat, lng);
   };
 
-
-
-
   // =========================================================================================================================
 
   // Chủ yếu là đang làm cái này nè, gửi polygon về backend
   // Để vẽ panel lên
-  // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend
+  // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend chỉ để tính diện tích
   const handlePolygonComplete = (poly) => {
-    const path = poly
-      .getPath()
-      .getArray()
-      .map((latLng) => ({
-        lat: latLng.lat(),
-        lng: latLng.lng(),
-      }));
-    setPolygonPath(path);
-    polygonRef.current = poly;
-    // console.log("Polygon coordinates:", path);
+    const path = poly.getPath().getArray().map(latLng => ({
+      lat: latLng.lat(),
+      lng: latLng.lng(),
+    }));
 
-    // Gửi polygon đến backend
-    fetch("http://localhost:8000/roof/api/polygon", {
+    // Lưu polygon vào state
+    const newIndex = polygons.length;
+    setPolygons(prev => [...prev, path]);
+    setPolygonPath(path);
+    setSelectedPolygonIndex(newIndex);
+
+    // Xóa polygon cũ nếu có
+    poly.setMap(null);
+    console.log("Polygon mới:", path);
+    // Gửi polygon đến backend để tính diện tích
+    fetch("http://localhost:8000/roof/api/area", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coordinates: path }),
+      body: JSON.stringify({
+        coordinates: path,
+        polygon_id: newIndex,
+      }),
     })
-      .then((res) => res.json())
-      .then((result) => {
-        // ❗ Gỡ polygon thật ra khỏi bản đồ
-        if (polygonRef.current) {
-          polygonRef.current.setMap(null);
-          polygonRef.current = null;
-        }
-
-        // ❗ Clear state để xóa polygon đang giữ
-        setPolygonPath([]);
-
-        // ✅ Cập nhật data để hiển thị polygon từ backend
-        setData(result);
-        setShowResult(true); // Hiển thị panel kết quả
+      .then(res => res.json())
+      .then(result => {
+        const { polygon_id } = result;
+        console.log("Kết quả:", result);
+        // Lưu theo polygon_id
+        setPolygonResults(prev => ({
+          ...prev,
+          [polygon_id]: result,
+        }));
+        setShowResult(true);
       })
-      .catch((err) => console.error("Lỗi khi gửi polygon:", err));
+      .catch(err => {
+        console.error("Lỗi khi gửi polygon:", err);
+      });
   };
 
+  // Hàm xử lý khi gửi polygon đã vẽ đến backend, hàm này sẽ trả về các panel ble ble
   const HandleSentPolygon = () => {
     if (selectedPolygonIndex != null) {
       const path = polygons[selectedPolygonIndex];
@@ -242,13 +288,14 @@ function App() {
         .then((res) => res.json())
         .then((result) => {
           const { polygon_id } = result;
-
+          
           // Save result polygon
           setPolygonResults((prev) => ({
             ...prev,
             [polygon_id]: result,
           }));
-          console.log("Polygon sent successfully:", result);
+          setPolygonPath([]);
+          console.log("Kết quả gắn panel:", result);
           setShowResult(true);
         })
         .catch((err) => console.error("Lỗi khi gửi polygon:", err));
@@ -272,7 +319,7 @@ function App() {
           className="search-input"
           type="text"
           ref={inputRef}
-          placeholder="🔍 Tìm kiếm địa điểm..."
+          placeholder="Tìm kiếm địa điểm..."
         />
 
       </Autocomplete>
@@ -281,11 +328,7 @@ function App() {
       <GoogleMap
         mapContainerStyle={containerStyle} // Kích thước của bản đồ
         //Vị trí trung tâm ban đầu của bản đồ
-        center={
-          data?.shrunken_polygon
-            ? { lat: data.center_lat, lng: data.center_lng }
-            : center
-        }
+        center={center}
         zoom={zoom} // Cấp độ zoom của bản đồ
         onLoad={onLoadMap} // Lưu tham chiếu đến bản đồ để sử dụng sau này
         options={{
@@ -317,21 +360,21 @@ function App() {
 
         {/* Vẽ polygon trên bản đồ */}
         <DrawingManager
-          onPolygonComplete={(poly) => {
-            const path = poly.getPath().getArray().map(latLng => ({
-              lat: latLng.lat(),
-              lng: latLng.lng()
-            }));
-            setPolygons(prev => [...prev, path]);
-            setSelectedPolygonIndex(polygons.length); // Đặt polygon mới là polygon được chọn
-            poly.setMap(null);
-            console.log("Polygon coordinates:", path);
-          }}
+          onPolygonComplete={handlePolygonComplete} // Gọi hàm khi vẽ polygon xong
           options={{
             drawingControl: true,
             drawingControlOptions: {
               position: 3,
               drawingModes: ["polygon"]
+            },
+            polygonOptions: {
+              fillColor: "#fff700",        // Màu vàng sáng
+              fillOpacity: 0.1,
+              strokeColor: "#fcd200",      // Viền vàng sáng
+              strokeWeight: 5,
+              clickable: true,
+              editable: true,
+              zIndex: 1000,
             }
           }}
         />
@@ -342,17 +385,17 @@ function App() {
             path={path}
             options={{
               editable: editMode && selectedPolygonIndex === idx,
-              fillColor: selectedPolygonIndex === idx ? "#00F" : "#0F0",
-              fillOpacity: 0.3,
-              strokeColor: "#00F",
-              strokeWeight: 1,
+              fillColor: selectedPolygonIndex === idx ? "#087500" : "#001975",
+              fillOpacity: selectedPolygonIndex === idx ? 0.6 : 0.4,
+              strokeColor: selectedPolygonIndex === idx ? "#00fc5d" : "#00f8fc",
+              strokeWeight: selectedPolygonIndex === idx ? 3 : 1,
               clickable: true
             }}
             onClick={() => {
               setSelectedPolygonIndex(idx);
               if (selectedPolygonIndex != null && selectedPolygonIndex !== idx) {
-                console.log("Selected polygon:", idx);
-                console.log("Polygon coordinates:", path);
+                console.log("Polygon đang chọn:", idx);
+                console.log("Tọa độ các góc:", path);
                 setEditMode(false); // Reset edit mode if another polygon is selected
               }
             }}
@@ -361,7 +404,22 @@ function App() {
         ))}
 
         {selectedPolygonIndex !== null && (
-          <div style={{ position: "absolute", top: 60, left: 10, zIndex: 1000 }}>
+          <div style={{ position: "absolute", top: 60, left: 10, zIndex: 1000, background: "rgba(0, 0, 0, 0.57)", padding: "10px", borderRadius: "6px" }}>
+            <div style={{ marginBottom: "6px", fontWeight: "bold" }}>
+              Thông tin polygon #{selectedPolygonIndex}
+            </div>
+            {/* Hiển thị diện tích và các thông tin khác của polygon đã chọn: */}
+            {polygonResults[selectedPolygonIndex]?.area_m2 && (
+            <div style={{ marginBottom: "10px" }}>
+              Diện tích: {polygonResults[selectedPolygonIndex].area_m2.toFixed(2)} m²
+            </div>
+            )}
+            {polygonResults[selectedPolygonIndex]?.best_panel && (
+            <div style={{ marginBottom: "10px" }}>
+              Panel tốt nhất: {polygonResults[selectedPolygonIndex].best_panel.panel_width}m x {polygonResults[selectedPolygonIndex].best_panel.panel_height}m
+            </div>
+            )}
+
             {!editMode && (
               <button 
                 onClick={() => setEditMode(true)}
@@ -373,10 +431,24 @@ function App() {
             {editMode && (
               <button 
                 onClick={() => {
+                  if (polygonRef.current) {
+                    const newPath = polygonRef.current.getPath().getArray().map((latLng) => ({
+                      lat: latLng.lat(),
+                      lng: latLng.lng()
+                    }));
+
+                    // Cập nhật polygon hiện tại trong danh sách
+                    setPolygons(prev => {
+                      const updated = [...prev];
+                      updated[selectedPolygonIndex] = newPath;
+                      return updated;
+                    });
+
+                    console.log("Đã cập nhật polygon:", selectedPolygonIndex);
+                  }
                   setEditMode(false);
-                  console.log("Polygon coordinates updated!");
-              }}
-                className="button" id ="confirm-edit-button"
+                }}
+                className="button" id="confirm-edit-button"
               >
                 Xác Nhận
               </button>
@@ -385,6 +457,13 @@ function App() {
               onClick={() => {
                 const newPolygons = polygons.filter((_, idx) => idx !== selectedPolygonIndex);
                 setPolygons(newPolygons);
+
+                setPolygonResults(prev => {
+                  const newResults = { ...prev };
+                  delete newResults[selectedPolygonIndex];
+                  return newResults;
+                });
+
                 setSelectedPolygonIndex(null);
                 setEditMode(false);
                 console.log("Polygon deleted, ID: ", selectedPolygonIndex);
@@ -397,12 +476,12 @@ function App() {
               onClick={() => {HandleSentPolygon();}}
               className="button" id="send-button"
             >
-              Backend
+              Gắn Panel
             </button>
           </div>
         )}
 
-        {/* Polygon vẽ bởi người dùng */}
+        {/* Polygon vẽ bởi người dùng
         {(!data?.shrunken_polygon || data.shrunken_polygon.length === 0) && polygonPath.length > 0 &&
           (console.log("shrunken_polygon 1"),
           (
@@ -420,51 +499,31 @@ function App() {
               path={polygonPath}
               options={{ fillColor: "#00F", fillOpacity: 0.3 }}
             />
-          ))}
+          ))} */}
 
+        
         {/* Vẽ polygon từ dữ liệu backend đã gửi về, cái polygon đã được chỉnh sửa bởi backend */}
-        {data?.shrunken_polygon &&
-          (console.log("Polygon path:", polygonPath),
+        
+        {selectedResult?.shrunken_polygon && selectedResult.shrunken_polygon.length > 0 && (
           (
             <Polygon
-              path={data.shrunken_polygon}
+              path={selectedResult.shrunken_polygon}
               options={{
-                fillColor: "#0000FF",
+                fillColor: "#616161",
                 fillOpacity: 0.3,
-                strokeColor: "#0000FF",
+                strokeColor: "#bf4000",
                 strokeOpacity: 1,
-                strokeWeight: 3,
+                strokeWeight: 2,
               }}
             />
           ))}
 
         {/* Vẽ các panel từ dữ liệu backend đã gửi về */}
-        {/* {data?.panels_latlng?.length > 0 &&
-          data.panels_latlng.map((panelCoords, idx) => (
-            <Polygon
-              key={idx}
-              path={panelCoords}
-              options={{
-                fillColor: "#00AA00",
-                fillOpacity: 0.4,
-                strokeColor: "#00AA00",
-                strokeOpacity: 0.8,
-                strokeWeight: 1,
-              }}
-            />
-          ))} */}
+        {renderedOverlayPanels}
+        {renderedPanels}  
 
-        {data?.panels_latlng?.map((panelCoords, idx) => (
-          <HybridPanelOverlay // component nha, để vẽ panel lẫn grid mà backend trả về
-            key={idx}
-            panelCoords={panelCoords}
-            angle={data.best_angle} // hoặc từng góc riêng nếu có
-            zoom={zoom}
-
-            panelWidthInMeters={data.best_panel.panel_width} // nếu cần
-            panelHeightInMeters={data.best_panel.panel_height} // nếu cần
-          />
-        ))}
+        {/* Vẽ các panel overlay */}
+        
       </GoogleMap>
     </LoadScript>
   );
