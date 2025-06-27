@@ -39,7 +39,8 @@ function App() {
   const [startPos, setStartPos] = useState(null);
   const [endPos, setEndPos] = useState(null);
   const [isPolygonMenuHovered, setIsPolygonMenuHovered] = useState(false);
-
+  const [snipActive, setSnipActive] = useState(false);                    // Biến để kiểm tra xem snipping tool có đang hoạt động hay không
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   
   const onLoadPolygon = (polygon, path) => {  // Hàm này sẽ được gọi khi polygon được tải xong
     polygonRef.current = polygon;             // Lưu tham chiếu đến polygon để có thể chỉnh sửa sau này
@@ -330,18 +331,51 @@ function App() {
       googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} //Nạp API key từ .env
       libraries={["drawing", "places"]} // Nạp các thư viện cần thiết, drwaing để vẽ polygon, places để sử dụng Autocomplete (search places)
     >
-      <Autocomplete
-        onLoad={(auto) => (autocompleteRef.current = auto)} // Lưu tham chiếu đến Autocomplete
-        onPlaceChanged={handlePlaceChanged} // Gọi hàm khi chọn địa điểm
-      >
-        {/* Khung tìm kiếm địa chỉ nè */}
-        <input
-          className="search-input"
-          type="text"
-          ref={inputRef}
-          placeholder="Tìm kiếm địa điểm..."
+      {/* CÁC CÔNG CỤ, HIỆN TẠI MỚI CÓ SNIPPING TOOL VỚI SEARCH BAR THÔI */}
+      <div id="toolbar">
+        <Autocomplete
+          onLoad={(auto) => (autocompleteRef.current = auto)}
+          onPlaceChanged={handlePlaceChanged}
+        >
+          <input id="search-input"
+            ref={inputRef}
+            type="text"
+            placeholder="Tìm kiếm địa điểm..."
+          />
+        </Autocomplete>
+
+        {/* MENU CÔNG CỤ */}
+          <div className="tools-menu-wrapper">
+            <button className="tools-button"
+              onClick={() => setShowToolsMenu(prev => !prev)}
+            >🧰 Tools</button>
+
+            {showToolsMenu && (
+              <div className="tools-dropdown">
+                <div id="snipping-tool"
+                  onClick={() => {
+                    setSnipActive(true);
+                    setShowToolsMenu(false);
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
+                  ✂️ Snipping Tool
+                </div>
+              </div>
+            )}
+          </div>        
+      </div>
+
+      {snipActive && (
+        <SnippingTool
+          onClose={() => setSnipActive(false)}
+          mapCenter={mapRef.current.getCenter().toJSON()}
+          zoom={mapRef.current.getZoom()}
+          polygonPath={selectedPolygonIndex != null ? polygons[selectedPolygonIndex] : []}
+          mapType="satellite"
         />
-      </Autocomplete>
+      )}
       {/* Bản đồ Google Maps */}
       <GoogleMap
         mapContainerStyle={containerStyle} // Kích thước của bản đồ

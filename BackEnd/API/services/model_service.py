@@ -103,7 +103,7 @@ def predict_large_image(model, image, tile_size=512, overlap=256, threshold=0.5)
     return (final_mask > threshold).astype(np.uint8) * 255
 
 # Endpoint để dự đoán ảnh
-@router.post("/predict/")
+@router.post("/predict")
 async def predict_endpoint(file: UploadFile = File(...)):
     try:
         image_bytes = await file.read()

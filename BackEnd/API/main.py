@@ -14,7 +14,7 @@ app.add_middleware(
 
 # from routes import module
 from services import roof_geometry_service
-# from services import model_service
+from services import model_service
 
 
 class Coordinate(BaseModel):
@@ -28,7 +28,7 @@ class PolygonRequest(BaseModel):
 
 # app.include_router(module.router, prefix="/module", tags=["Module"])
 app.include_router(roof_geometry_service.router, prefix="/roof", tags=["Roof"])
-# app.include_router(model_service.router, prefix="/model", tags=["Model"])
+app.include_router(model_service.router, prefix="/model", tags=["Model"])
 
 @app.get("/")
 def read_root():

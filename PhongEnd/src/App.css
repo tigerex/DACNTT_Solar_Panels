@@ -227,3 +227,72 @@
   visibility: visible;
   opacity: 1;
 }
+
+/* App.css */
+
+#toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(65, 65, 65, 0.678);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+#search-input {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #000000;
+  background: rgb(255, 255, 255);
+  border-radius: 4px;
+  border: 1px solid #ffffff;
+  width: 350px;
+}
+
+.tools-menu-wrapper {
+  position: relative;
+}
+
+.tools-button {
+  height: 36px;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 4px;
+  padding: 0 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tools-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  padding: 4px 0;
+  margin-top: 4px;
+  z-index: 1001;
+}
+
+#snipping-tool {
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+#snipping-tool:hover {
+  background-color: #3d3d3d;
+}
+
