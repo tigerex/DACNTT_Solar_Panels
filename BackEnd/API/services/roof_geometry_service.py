@@ -27,6 +27,7 @@ class Coordinate(BaseModel):
 class PolygonRequest(BaseModel):
     coordinates: list[Coordinate]
     polygon_id: int | None = None
+    panel_gap: float # Khoảng cách giữa các panel, mặc định là 0.2m
 
 # ==== Hàm đảm bảo polygon khép kín ====
 # def ensure_polygon_closed(coords):
@@ -195,20 +196,20 @@ def generate_panel_grid(polygon_meters, panel_width, panel_height, angle_deg, ga
 
     return panels_latlng
 
-def find_best_orientation_limited(polygon_meters, panel_width, panel_height, angle_deg):
+def find_best_orientation_limited(polygon_meters, panel_width, panel_height, angle_deg, panel_gap=0.2):
     candidates = [angle_deg, (angle_deg + 90) % 180]
     best_angle = None
     best_panels = []
     max_count = 0
 
     for angle in candidates:
-        panels = generate_panel_grid(polygon_meters, panel_width, panel_height, angle)
+        panels = generate_panel_grid(polygon_meters, panel_width, panel_height, angle, gap_x=panel_gap, gap_y=panel_gap)
         if len(panels) > max_count:
             max_count = len(panels)
             best_angle = angle
             best_panels = panels
 
-    return best_angle, best_panels
+    return best_angle, best_panels, max_count
 
 # API chính: xử lý polygon và trả về thông tin
 @router.post("/api/polygon")
@@ -227,11 +228,12 @@ async def get_panel_map(polygon: PolygonRequest):
         return JSONResponse(content={"error": f"Lỗi chọn panel: {str(e)}"}, status_code=400)
 
     try:
-        best_angle, panels_latlng = find_best_orientation_limited(
+        best_angle, panels_latlng, best_count = find_best_orientation_limited(
             roof_info["polygon_meters"],
             best_panel["panel"]["width"],
             best_panel["panel"]["height"],
-            roof_info["angle_deg"]
+            roof_info["angle_deg"],
+            panel_gap=polygon.panel_gap if hasattr(polygon, 'panel_gap') else 0.2
         )
     except Exception as e:
         return JSONResponse(content={"error": f"Lỗi sinh grid panel: {str(e)}"}, status_code=400)
@@ -250,7 +252,7 @@ async def get_panel_map(polygon: PolygonRequest):
             "panel_normal_power": best_panel["panel"]["normal_power"],
             "panel_price": best_panel["panel"]["price_vnd"],
             "panel_image": best_panel["panel"]["image"],
-            "count": best_panel["count"],
+            "count": best_count,
             "coverage": best_panel["coverage"]
         },
         "best_angle": best_angle,

@@ -1,16 +1,9 @@
-import {
-  GoogleMap,
-  LoadScript,
-  DrawingManager,
-  Marker,
-  Polygon,
-  Autocomplete,
-} from "@react-google-maps/api";
+import {GoogleMap,LoadScript,DrawingManager,Marker,Polygon,  Autocomplete,} from "@react-google-maps/api";
 import './App.css';
 import { useState, useRef, useEffect, useMemo } from "react";
 // import { OverlayView } from "@react-google-maps/api";
 import HybridPanelOverlay from "./components/HybridPanelOverlay";
-import { getDistance } from "geolib";
+import SnippingTool from "./components/SnipingTool"; // Import snipping tool component, nếu cần dùng thì bỏ comment dòng này
 
 // Định nghĩa các style, không cần nữa do có CSS riêng, nhưng tui thích để 2 thằng này ở đây :D
 const containerStyle = {
@@ -41,7 +34,11 @@ function App() {
   const [selectedPolygonIndex, setSelectedPolygonIndex] = useState(null); // Chỉ số của polygon được chọn
   const [editMode, setEditMode] = useState(false);                        // Chế độ chỉnh sửa polygon
 
-  const [sunlightHours, setSunlightHours] = useState(5);                // Số giờ nắng trung bình mỗi ngày, mặc định là 4.5 giờ 
+  const [sunlightHours, setSunlightHours] = useState(5);                  // Số giờ nắng trung bình mỗi ngày, mặc định là 4.5 giờ 
+  const [panelGap, setPanelGap] = useState(0.2);                          // Khoảng cách giữa các panel, mặc định là 0.1 mét
+  const [startPos, setStartPos] = useState(null);
+  const [endPos, setEndPos] = useState(null);
+  const [isPolygonMenuHovered, setIsPolygonMenuHovered] = useState(false);
 
   
   const onLoadPolygon = (polygon, path) => {  // Hàm này sẽ được gọi khi polygon được tải xong
@@ -296,6 +293,7 @@ function App() {
         body: JSON.stringify({
           coordinates: path,
           polygon_id: selectedPolygonIndex,
+          panel_gap: panelGap, // Khoảng cách giữa các panel
         }),
       })
         .then((res) => res.json())
@@ -326,10 +324,7 @@ function App() {
     }
   };
 
-
-
   // =========================================================================================================================
-
   return (
     <LoadScript
       googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} //Nạp API key từ .env
@@ -346,9 +341,7 @@ function App() {
           ref={inputRef}
           placeholder="Tìm kiếm địa điểm..."
         />
-
       </Autocomplete>
-
       {/* Bản đồ Google Maps */}
       <GoogleMap
         mapContainerStyle={containerStyle} // Kích thước của bản đồ
@@ -375,7 +368,7 @@ function App() {
             {
               featureType: "all", // Tất cả các tính năng
               elementType: "labels", // Các nhãn
-              stylers: [{ visibility: "off" }], // Ẩn nhãn
+              stylers: [{ visibility: "on" }], // Ẩn nhãn
             },
           ],
         }
@@ -410,7 +403,7 @@ function App() {
             path={path}
             options={{
               editable: editMode && selectedPolygonIndex === idx,
-              fillColor: selectedPolygonIndex === idx ? "#087500" : "#001975",
+              fillColor: selectedPolygonIndex === idx ? "#8cff80" : "#0015ff",
               fillOpacity: selectedPolygonIndex === idx ? 0.6 : 0.4,
               strokeColor: selectedPolygonIndex === idx ? "#00fc5d" : "#00f8fc",
               strokeWeight: selectedPolygonIndex === idx ? 3 : 1,
@@ -427,7 +420,36 @@ function App() {
             onLoad={onLoadPolygon} // Lưu tham chiếu đến polygon để có thể chỉnh sửa
           />
         ))}
+        {/* Hiển thị snipping tool nếu cần */}
+        {/* danh sách polygon  */}
+        <div
+          className={`polygon-slide-container ${isPolygonMenuHovered ? "expanded" : ""}`}
+          onMouseEnter={() => setIsPolygonMenuHovered(true)}
+          onMouseLeave={() => setIsPolygonMenuHovered(false)}
+        >
+          <div className="polygon-slide-tab">
+            P O L Y G O N S 
+          </div>
 
+          <div className="polygon-slide-menu">
+            <div className="polygon-slide-title">Danh sách</div>
+            <div className="polygon-slide-list">
+              {polygons.map((path, idx) => (
+                <div
+                  key={idx}
+                  className={`polygon-slide-item ${
+                    selectedPolygonIndex === idx ? "selected" : ""
+                  }`}
+                  onClick={() => setSelectedPolygonIndex(idx)}
+                  title={`Polygon #${idx}`}
+                >
+                  Polygon #{idx}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Hiển thị thông tin polygon đã chọn */}
         {selectedPolygonIndex !== null && (
           <div
             style={{
@@ -465,24 +487,79 @@ function App() {
                     <div style={{ fontWeight: "bold", marginBottom: "6px" }}>🔧 Thông số kỹ thuật pin năng lượng mặt trời</div>
                     <div><strong>Model:</strong> {bp.model}</div>
                     <div><strong>Kích thước:</strong> {(bp.panel_width * 1000).toFixed(0)}mm × {(bp.panel_height * 1000).toFixed(0)}mm</div>
-                    <div><strong>Công suất tối đa (STC*):</strong> {bp.panel_best_power} W</div>
-                    <div><strong>Công suất thông thường (NOCT*):</strong> {bp.panel_normal_power} W</div>
-                    <div><strong>Đơn giá mỗi tấm:</strong> {bp.panel_price.toLocaleString()} VND</div>
+                    <div>
+                      <strong>Công suất tối đa </strong>
+                      <span className="tooltip">
+                        (STC*)
+                        <span className="tooltip-text">
+                          Điều Kiện Kiểm Tra Chuẩn<br />
+                          <em>(Standard Test Conditions)</em>
+                          <pre>Mật độ nắng: 1000W/m²</pre>
+                          <pre>Nhiệt độ: 25°C</pre>
+                          <pre>Áp suất khí quyền: AM1.5</pre>
+                        </span>
+                      </span>: {bp.panel_best_power} W
+                    </div>
+                    <div>
+                      <strong>Công suất thông thường </strong>
+                      <span className="tooltip">
+                        (NOCT*)
+                        <span className="tooltip-text">
+                          Điều Kiện Vận Hành Ngoài Trời<br />
+                          <em>(Nominal Operating Cell Temperature)</em>
+                          <pre>Mật độ nắng: 800W/m²</pre>
+                          <pre>Nhiệt độ: 20°C</pre>
+                          <pre>Gió: 1m/s)</pre>
+                        </span>
+                      </span>: {bp.panel_normal_power} W
+                    </div>
                   </div>
 
                   {/* BẢNG THÔNG TIN THEO POLYGON */}
                   <div style={{ padding: "10px", background: "#303030", borderRadius: "6px" }}>
                     <div style={{ fontWeight: "bold", marginBottom: "6px" }}>📊 Thống kê cho polygon #{selectedPolygonIndex}</div>
                     <div><strong>Số lượng tấm:</strong> {bp.count}</div>
-                    <div><strong>Công suất tổng khả thi (STC*):</strong> {totalBestPower.toFixed(2)} W</div>
-                    <div><strong>Công suất tổng thông thường (NOCT*):</strong> {totalNormalPower.toFixed(2)} W</div>
+                    <div>
+                      <strong>Công suất tổng khả thi </strong>
+                      <span className="tooltip">
+                        (STC*)
+                        <span className="tooltip-text">
+                          Điều Kiện Kiểm Tra Chuẩn<br />
+                          <em>(Standard Test Conditions)</em>
+                          <pre>Mật độ nắng: 1000W/m²</pre>
+                          <pre>Nhiệt độ: 25°C</pre>
+                          <pre>Áp suất khí quyền: AM1.5</pre>
+                        </span>
+                      </span>: {totalBestPower.toFixed(2)} W
+                    </div>
+                    <div>
+                      <strong>Công suất tổng thông thường </strong>
+                      <span className="tooltip">
+                        (NOCT*)
+                        <span className="tooltip-text">
+                          Điều Kiện Vận Hành Ngoài Trời<br />
+                          <em>(Nominal Operating Cell Temperature)</em>
+                          <pre>Mật độ nắng: 800W/m²</pre>
+                          <pre>Nhiệt độ: 20°C</pre>
+                          <pre>Gió: 1m/s)</pre>
+                        </span>
+                      </span>: {totalNormalPower.toFixed(2)} W
+                    </div>
                     <div><strong>Điện năng tối đa/ngày:</strong> {(bp.count * bp.panel_best_power * sunlightHours  * 0.8 / 1000).toFixed(2)} kWh</div> {/* giả sử 4.5 giờ nắng và hiệu suất 80% */}
                     <div><strong>Điện năng trung bình/ngày:</strong> {(bp.count * bp.panel_normal_power * sunlightHours  * 0.8 / 1000).toFixed(2)} kWh</div> {/* giả sử 4.5 giờ nắng và hiệu suất 80% */}
                     <div><strong>Tổng giá:</strong> {totalPrice.toLocaleString()} VND</div>
                   </div>
 
-                  <div style={{ marginBottom: "10px" }}>
-                    <label htmlFor="sun-slider" style={{ fontWeight: "bold" }}>☀️ Số giờ nắng trung bình mỗi ngày:</label>
+                 {/* SLIDER GIỜ NẮNG TRUNG BÌNH MỖI NGÀY */}
+                  <div className="sunlight-container">
+                    <div className="sunlight-header">
+                      <label htmlFor="sun-slider" className="sunlight-label">
+                        ☀️ Số giờ nắng trung bình mỗi ngày:
+                      </label>
+                      <div className="sunlight-value">
+                        {sunlightHours.toFixed(1)} giờ
+                      </div>
+                    </div>
                     <input
                       id="sun-slider"
                       type="range"
@@ -491,14 +568,27 @@ function App() {
                       step="0.1"
                       value={sunlightHours}
                       onChange={(e) => setSunlightHours(parseFloat(e.target.value))}
-                      style={{ width: "100%", marginTop: "5px" }}
+                      className="sunlight-slider"
                     />
-                    <div style={{ textAlign: "right", fontSize: "14px", color: "#ffc107" }}>
-                      {sunlightHours.toFixed(1)} giờ
-                    </div>
+                  </div>
+
+                  {/* SLIDER KHOẢNG CÁCH GIỮA CÁC TẤM PIN */}
+                  <div className="panel-gap-container">
+                    <label htmlFor="panel-gap" className="panel-gap-label">
+                      🧱 Khoảng cách giữa các tấm (m):
+                    </label>
+                    <input
+                      id="panel-gap"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={panelGap}
+                      onChange={(e) => setPanelGap(parseFloat(e.target.value))}
+                      className="panel-gap-input"
+                    />
                   </div>
                 </div>
-
               );
             })()}
 
@@ -573,8 +663,14 @@ function App() {
             >
               Đi đến
             </button>
+            {/* <div className="info-footnote">
+              <strong>*STC</strong> (Standard Test Conditions): điều kiện kiểm tra chuẩn (Mật độ nắng: 1000W/m², Nhiệt độ: 25°C, Áp suất khí quyền: AM1.5). <br />
+              <strong>*NOCT</strong> (Nominal Operating Cell Temperature): điều kiện vận hành ngoài trời (800W/m², 20°C, gió 1m/s).
+            </div> */}
+
 
           </div>
+          
         )}
 
         {/* Hiển thị kết quả tính toán diện tích và panel nếu có */}
@@ -591,7 +687,7 @@ function App() {
               }}
             />
           ))}
-
+        
         {/* Vẽ các panel từ dữ liệu backend đã gửi về */}
         {renderedOverlayPanels}
         {renderedPanels}  

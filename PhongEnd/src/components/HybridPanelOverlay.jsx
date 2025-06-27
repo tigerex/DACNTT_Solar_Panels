@@ -12,7 +12,7 @@ const meterToPixelScale = (zoom, lat) => {
   const initialResolution = EARTH_CIRCUMFERENCE / TILE_SIZE; // mét / pixel tại zoom 0
 
   const resolution = initialResolution * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom); // theo Google Maps API documentation
-  return 1 / resolution; // pixel / mét
+  return 2 / resolution; // pixel / mét
 };
 
 
@@ -67,7 +67,7 @@ const HybridPanelOverlay = ({
             backgroundColor: "#242424", // nền đen đậm
             backgroundImage: `
               repeating-linear-gradient(to right,#ffffff 0.5px, transparent 0.5px, transparent 6px),
-              linear-gradient(to bottom, transparent 50%,rgb(38, 0, 255) 20%,rgb(138, 0, 0) 100%, transparent 50%) 
+              linear-gradient(to bottom, transparent 0%,rgb(38, 0, 255) 20%,rgb(138, 0, 0) 100%, transparent 50%) 
             `,
             border: "1px solid #333",
             borderRadius: "2px",
