@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 
-function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "satellite" }) {
+function SnippingTool({ onClose, onResult, mapCenter, zoom, polygonPath = [], mapType = "satellite" }) {
   const [snipping, setSnipping] = useState(true); // Đặt trạng thái snipping ban đầu là true
   const [startPos, setStartPos] = useState(null); // Vị trí bắt đầu của snip
   const [endPos, setEndPos] = useState(null);     // Vị trí kết thúc của snip
@@ -15,12 +15,24 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
   };
 
   // Hàm gửi ảnh đến backend để dự đoán
-  const sendToBackend = async (imageUrl) => {
+  const sendToBackend = async (imageUrl, centerLat, centerLng, zoom, size, scale) => {
     try {
       const file = await fetchImageAsFile(imageUrl); // Lấy ảnh từ URL và chuyển đổi thành File
 
       const formData = new FormData(); 
       formData.append("file", file); // Thêm file vào formData
+      formData.append("center", JSON.stringify({ lat: centerLat, lng: centerLng })); // Thêm tọa độ trung tâm vào formData
+      formData.append("zoom", zoom); // Thêm mức zoom vào formData
+      formData.append("size", size); // Thêm kích thước ảnh vào formData
+      formData.append("scale", scale); // Thêm tỷ lệ ảnh vào formData
+
+      // Debug
+      // console.log("Sending to backend:", {
+      //   center: { lat: centerLat, lng: centerLng },
+      //   zoom,
+      //   size,
+      //   fileName: file.name,
+      // });
 
       const res = await fetch("http://localhost:8000/model/predict", {
         method: "POST",
@@ -30,22 +42,70 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
       const data = await res.json();
 
       if (data.mask_base64) {
-        // Tạo một thẻ img để hiển thị kết quả dự đoán
-        const img = document.createElement("img");
-        img.src = "data:image/png;base64," + data.mask_base64; // Chuyển đổi base64 thành URL hình ảnh
-        img.style.position = "fixed";
-        img.style.bottom = "10px";
-        img.style.right = "10px";
-        img.style.zIndex = 10000;
-        img.style.border = "1px solid #0f0";
-        img.style.boxShadow = "0 0 10px rgba(0, 255, 0, 0.27)";
-        img.style.maxWidth = "300px";
-        img.style.maxHeight = "300px";
-        img.title = "Click to close";
-        img.onclick = () => document.body.removeChild(img);
-        document.body.appendChild(img);
+        // Tạo khung chứa img + 2 nút
+        const container = document.createElement("div");
+        container.style.position = "fixed";
+        container.style.bottom = "10px";
+        container.style.right = "10px";
+        container.style.zIndex = 10000;
+        container.style.border = "1px solid #0f0";
+        container.style.boxShadow = "0 0 10px rgba(0, 255, 0, 0.27)";
+        container.style.maxWidth = "320px";
+        container.style.maxHeight = "320px";
+        container.style.background = "#000";
+        container.style.padding = "5px";
+        container.style.display = "flex";
+        container.style.flexDirection = "column";
+        container.style.alignItems = "center";
+        container.style.gap = "6px";
+        container.style.borderRadius = "6px";
 
-        console.log("Thời gian xử lý:", data.time_taken);
+        const img = document.createElement("img");
+        img.src = "data:image/png;base64," + data.mask_base64;
+        img.style.maxWidth = "100%";
+        img.style.maxHeight = "240px";
+        img.style.cursor = "pointer";
+        img.title = "Click to close image";
+        img.onclick = () => document.body.removeChild(container);
+
+        // Nút chấp nhận ✅
+        const acceptBtn = document.createElement("button");
+        acceptBtn.textContent = "✅";
+        acceptBtn.style.background = "green";
+        acceptBtn.style.color = "white";
+        acceptBtn.style.border = "none";
+        acceptBtn.style.padding = "6px 12px";
+        acceptBtn.style.cursor = "pointer";
+        acceptBtn.style.borderRadius = "4px";
+        acceptBtn.onclick = () => {
+          onResult(data.polygons);
+          document.body.removeChild(container);
+        };
+
+        // Nút từ chối ❌
+        const declineBtn = document.createElement("button");
+        declineBtn.textContent = "❌";
+        declineBtn.style.background = "red";
+        declineBtn.style.color = "white";
+        declineBtn.style.border = "none";
+        declineBtn.style.padding = "6px 12px";
+        declineBtn.style.cursor = "pointer";
+        declineBtn.style.borderRadius = "4px";
+        declineBtn.onclick = () => {
+          // Xoá ảnh và không làm gì
+          document.body.removeChild(container);
+        };
+
+        const buttonWrapper = document.createElement("div");
+        buttonWrapper.style.display = "flex";
+        buttonWrapper.style.gap = "10px";
+        buttonWrapper.appendChild(acceptBtn);
+        buttonWrapper.appendChild(declineBtn);
+
+        container.appendChild(img);
+        container.appendChild(buttonWrapper);
+
+        document.body.appendChild(container);
       } else {
         alert("Không có kết quả dự đoán!");
       }
@@ -118,6 +178,8 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
     const width = Math.abs(startPos.x - endPos.x);
     const height = Math.abs(startPos.y - endPos.y);
 
+    const scale = 1; // Tỷ lệ ảnh, mặc định là 1
+
     // Giới hạn kích thước ảnh tối đa là 640x640px
     const limitedWidth = Math.min(width, 640);
     const limitedHeight = Math.min(height, 640);
@@ -133,11 +195,15 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
       pathParam = `&path=color:0xff0000ff|weight:3|${pathCoords}`;
     }
 
-    const centerParam = `center=${mapCenter.lat},${mapCenter.lng}`;
+    const centerLat = mapCenter.lat;
+    const centerLng = mapCenter.lng;
+
+    const centerParam = `center=${centerLat},${centerLng}`;
     const zoomParam = `zoom=${zoom}`;
     const maptypeParam = `maptype=${mapType}`;
 
-    return `${base}?${centerParam}&${zoomParam}&size=${size}&${maptypeParam}${pathParam}&key=${key}`;
+    const url = `${base}?${centerParam}&${zoomParam}&size=${size}&${maptypeParam}${pathParam}&key=${key}`;
+    return {url, centerLat, centerLng, zoom, size, scale};
   };
 
 
@@ -150,9 +216,13 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
 
     setSnipping(false);
 
-    const staticMapUrl = getStaticMapUrl();
+    const { url, centerLat, centerLng, zoom, size, scale} = getStaticMapUrl();
+    // console.log("Static Map URL:", url);
+    // console.log("Center:", { lat: centerLat, lng: centerLng });
+    // console.log("Zoom:", zoom);
+    // console.log("Size:", size);
 
-    sendToBackend(staticMapUrl);
+    sendToBackend(url, centerLat, centerLng, zoom, size, scale);
 
     onClose?.();
   };

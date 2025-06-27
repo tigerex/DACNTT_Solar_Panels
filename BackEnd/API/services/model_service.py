@@ -1,10 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, APIRouter
+from fastapi import FastAPI, UploadFile, File, APIRouter, Form
 from fastapi.responses import JSONResponse
 
 import torch
 import segmentation_models_pytorch as smp
 import albumentations as A
-
+import cv2
+import json
 
 from PIL import Image
 import time
@@ -39,7 +40,32 @@ try:
     print("=============================================\n") # Nên là "resnet34"
 except Exception as e:
     print(f"Error loading model: {e}")
-    
+
+# Các hàm chuyển đổi tọa độ Google Maps sang tọa độ thế giới và ngược lại
+TILE_SIZE = 256
+
+def latlng_to_world(lat, lng):
+    siny = math.sin(lat * math.pi / 180)
+    siny = min(max(siny, -0.9999), 0.9999)
+    x = TILE_SIZE * (0.5 + lng / 360)
+    y = TILE_SIZE * (0.5 - math.log((1 + siny) / (1 - siny)) / (4 * math.pi))
+    return x, y
+
+def world_to_latlng(x, y):
+    lng = (x / TILE_SIZE - 0.5) * 360
+    lat_rad = 2 * math.atan(math.exp((0.5 - y / TILE_SIZE) * 2 * math.pi)) - math.pi / 2
+    lat = lat_rad * 180 / math.pi
+    return lat, lng
+
+def pixel_to_latlng(px, py, zoom, scale, center_lat, center_lng, image_width, image_height):
+    center_world_x, center_world_y = latlng_to_world(center_lat, center_lng)
+    scale_factor = (TILE_SIZE * scale) / TILE_SIZE
+    dx = px - image_width / 2
+    dy = py - image_height / 2
+    x = center_world_x + dx / scale_factor
+    y = center_world_y + dy / scale_factor
+    return world_to_latlng(x, y)
+
 # # Hàm tiền xử lý ảnh
 # def preprocess_image(image_path, img_width, img_height):
 #     image = Image.open(image_path).convert("RGB")
@@ -102,10 +128,30 @@ def predict_large_image(model, image, tile_size=512, overlap=256, threshold=0.5)
     final_mask = averaged_mask[:original_height, :original_width]
     return (final_mask > threshold).astype(np.uint8) * 255
 
+# Hàm để trích xuất polygon từ mask
+def extract_polygons_from_mask(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    polygons = []
+    for contour in contours:
+        if cv2.contourArea(contour) > 300:
+            polygon = contour.squeeze().tolist()
+            if isinstance(polygon[0], list):  # multiple points
+                polygons.append(polygon)
+    return polygons
+
 # Endpoint để dự đoán ảnh
 @router.post("/predict")
-async def predict_endpoint(file: UploadFile = File(...)):
+async def predict_endpoint(file: UploadFile = File(...), center: str= Form(...), zoom: int = Form(...), size: str = Form(...), scale : int = Form(1)):
     try:
+        center_data = json.loads(center)
+        center_lat = center_data.get("lat")
+        center_lng = center_data.get("lng")
+        if center_lat is None or center_lng is None:
+            return JSONResponse(status_code=400, content={"error": "Invalid center coordinates"})
+        width, height = map(int, size.split('x'))
+        if width <= 0 or height <= 0:
+            return JSONResponse(status_code=400, content={"error": "Invalid size dimensions"})
+        
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
@@ -113,14 +159,26 @@ async def predict_endpoint(file: UploadFile = File(...)):
         mask = predict_large_image(model, image)
         end_time = time.time()
 
+        polygons_px = extract_polygons_from_mask(mask)
+
         # Convert mask to base64
         mask_img = Image.fromarray(mask)
         buf = io.BytesIO()
         mask_img.save(buf, format="PNG")
         mask_base64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
+        # Convert polygons to lat/lng
+        polygons_geo = []
+        for polygon in polygons_px:
+            geo_polygon = [
+                pixel_to_latlng(x, y, zoom, scale, center_lat, center_lng, width, height)
+                for x, y in polygon
+            ]
+            polygons_geo.append(geo_polygon)
+
         return JSONResponse(content={
             "mask_base64": mask_base64,
+            "polygons": polygons_geo,
             "time_taken": f"{end_time - start_time:.2f} seconds"
         })
 

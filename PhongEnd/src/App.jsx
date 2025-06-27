@@ -41,6 +41,8 @@ function App() {
   const [isPolygonMenuHovered, setIsPolygonMenuHovered] = useState(false);
   const [snipActive, setSnipActive] = useState(false);                    // Biến để kiểm tra xem snipping tool có đang hoạt động hay không
   const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [maskResult, setMaskResult] = useState(null);
+
   
   const onLoadPolygon = (polygon, path) => {  // Hàm này sẽ được gọi khi polygon được tải xong
     polygonRef.current = polygon;             // Lưu tham chiếu đến polygon để có thể chỉnh sửa sau này
@@ -241,6 +243,37 @@ function App() {
     const lng = place.geometry.location.lng();
     moveTo(lat, lng);
   };
+
+    const handleMaskResult = (data) => {
+      setMaskResult(data);  // This could include base64 image, time taken, etc.
+      
+      console.log("Tổng cộng polygon:", data.length);
+      data.forEach((polygon, index) => {
+        console.log(`Polygon #${index + 1} (${polygon.length} điểm):`, polygon);
+      });
+
+      const paths = data.map((polygon) =>
+        polygon.map(([lat, lng]) => ({ lat, lng }))
+      );
+
+      data.forEach((polygonCoords, index) => {
+        const polygon = new google.maps.Polygon({
+          paths: polygonCoords.map(([lat, lng]) => ({ lat, lng })),
+          strokeColor: "#FF0000",
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: "#FF0000",
+          fillOpacity: 0.35,
+        });
+
+        polygon.setMap(mapRef.current); // mapInstance là Google Maps instance
+
+        // ✅ Gọi thẳng luôn handler như khi user tự vẽ
+        handlePolygonComplete(polygon);
+      });
+
+
+    };
   
   // =========================================================================================================================
   // Hàm này sẽ render các nhãn khoảng cách giữa các cạnh của polygon
@@ -407,6 +440,7 @@ function App() {
   };
 
   // =========================================================================================================================
+  // Từ đây là render giao diện chính của ứng dụng
   return (
     <LoadScript
       googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} //Nạp API key từ .env
@@ -450,6 +484,7 @@ function App() {
 
       {snipActive && (
         <SnippingTool
+          onResult={handleMaskResult}
           onClose={() => setSnipActive(false)}
           mapCenter={mapRef.current.getCenter().toJSON()}
           zoom={mapRef.current.getZoom()}
