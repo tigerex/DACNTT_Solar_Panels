@@ -27,7 +27,7 @@ class Coordinate(BaseModel):
 class PolygonRequest(BaseModel):
     coordinates: list[Coordinate]
     polygon_id: int | None = None
-    panel_gap: float # Khoảng cách giữa các panel, mặc định là 0.2m
+    panel_gap: float | None = None # Khoảng cách giữa các panel, mặc định là 0.2m
 
 # ==== Hàm đảm bảo polygon khép kín ====
 # def ensure_polygon_closed(coords):
@@ -151,7 +151,7 @@ def choose_best_panel_type(area):
     return best_panel
 
 # ==== Hàm tạo lớp panel ====
-def generate_panel_grid(polygon_meters, panel_width, panel_height, angle_deg, gap_x=0.2, gap_y=0.2):
+def generate_panel_grid(polygon_meters, panel_width, panel_height, angle_deg, gap_x=0.5, gap_y=0.5):
     placed_panels = []
     origin = polygon_meters.centroid
     rotated_polygon = rotate(polygon_meters, -angle_deg, origin=origin, use_radians=False)
@@ -196,7 +196,7 @@ def generate_panel_grid(polygon_meters, panel_width, panel_height, angle_deg, ga
 
     return panels_latlng
 
-def find_best_orientation_limited(polygon_meters, panel_width, panel_height, angle_deg, panel_gap=0.2):
+def find_best_orientation_limited(polygon_meters, panel_width, panel_height, angle_deg, panel_gap=0.5):
     candidates = [angle_deg, (angle_deg + 90) % 180]
     best_angle = None
     best_panels = []
@@ -233,7 +233,7 @@ async def get_panel_map(polygon: PolygonRequest):
             best_panel["panel"]["width"],
             best_panel["panel"]["height"],
             roof_info["angle_deg"],
-            panel_gap=polygon.panel_gap if hasattr(polygon, 'panel_gap') else 0.2
+            panel_gap=polygon.panel_gap if hasattr(polygon, 'panel_gap') else 0.5
         )
     except Exception as e:
         return JSONResponse(content={"error": f"Lỗi sinh grid panel: {str(e)}"}, status_code=400)
@@ -262,12 +262,6 @@ async def get_panel_map(polygon: PolygonRequest):
 
     return result
 
-# Test endpoint
-@router.get("/api/test")
-async def test_endpoint():
-    return {"message": "API is working!"}
-
-
 # Endpoint tính diện tích polygon
 @router.post("/api/area")
 async def calculate_area(polygon: PolygonRequest):
@@ -280,8 +274,14 @@ async def calculate_area(polygon: PolygonRequest):
         print(f"Calculated area: {area} m²")  # Debug log
         result = {
             "area_m2": area,
-            "polygon_id": polygon.polygon_id if polygon.polygon_id is not None else None
+            "polygon_id": polygon.polygon_id if polygon.polygon_id is not None else None,
+            "coordinates": [{"lat": p.lat, "lng": p.lng} for p in polygon.coordinates]
             }
         return result
     except Exception as e:
         return JSONResponse(content={"error": f"Lỗi khi tính diện tích: {str(e)}"}, status_code=400)
+
+# Test endpoint
+@router.get("/api/test")
+async def test_endpoint():
+    return {"message": "API is working!"}

@@ -1,24 +1,26 @@
 import React, { useState, useRef } from "react";
 
 function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "satellite" }) {
-  const [snipping, setSnipping] = useState(true);
-  const [startPos, setStartPos] = useState(null);
-  const [endPos, setEndPos] = useState(null);
-  const overlayRef = useRef(null);
-  const [mousePos, setMousePos] = useState(null);
+  const [snipping, setSnipping] = useState(true); // Đặt trạng thái snipping ban đầu là true
+  const [startPos, setStartPos] = useState(null); // Vị trí bắt đầu của snip
+  const [endPos, setEndPos] = useState(null);     // Vị trí kết thúc của snip
+  const overlayRef = useRef(null);                // Tham chiếu đến overlay để có thể thao tác sau này
+  const [mousePos, setMousePos] = useState(null); // Vị trí chuột để hiển thị tooltip
 
+  // Hàm để lấy ảnh từ URL và chuyển đổi thành File
   const fetchImageAsFile = async (url, filename = "snip.png") => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new File([blob], filename, { type: blob.type });
+    const response = await fetch(url);  // Gửi yêu cầu GET đến GoogleMap Static API
+    const blob = await response.blob(); // Lấy blob từ response
+    return new File([blob], filename, { type: blob.type }); // Chuyển đổi blob thành File
   };
 
+  // Hàm gửi ảnh đến backend để dự đoán
   const sendToBackend = async (imageUrl) => {
     try {
-      const file = await fetchImageAsFile(imageUrl);
+      const file = await fetchImageAsFile(imageUrl); // Lấy ảnh từ URL và chuyển đổi thành File
 
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = new FormData(); 
+      formData.append("file", file); // Thêm file vào formData
 
       const res = await fetch("http://localhost:8000/model/predict", {
         method: "POST",
@@ -28,9 +30,9 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
       const data = await res.json();
 
       if (data.mask_base64) {
-        // Show result as overlay preview
+        // Tạo một thẻ img để hiển thị kết quả dự đoán
         const img = document.createElement("img");
-        img.src = "data:image/png;base64," + data.mask_base64;
+        img.src = "data:image/png;base64," + data.mask_base64; // Chuyển đổi base64 thành URL hình ảnh
         img.style.position = "fixed";
         img.style.bottom = "10px";
         img.style.right = "10px";
@@ -43,52 +45,60 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
         img.onclick = () => document.body.removeChild(img);
         document.body.appendChild(img);
 
-        console.log("Prediction time:", data.time_taken);
+        console.log("Thời gian xử lý:", data.time_taken);
       } else {
-        alert("No prediction result");
+        alert("Không có kết quả dự đoán!");
       }
     } catch (err) {
-      console.error("Error sending image to backend:", err);
-      alert("Prediction failed. Check console.");
+      console.error("Lỗi gửi backEnd:", err);
+      alert("LỖI LỖI LỖI LỖI LỖI LỖIIIIIIIIIIIIIIIIIIIIII");
     }
   };
 
+  // Hàm bắt đầu snipping khi người dùng nhấn chuột
   const startSnip = (e) => {
-    setStartPos({ x: e.clientX, y: e.clientY });
-    setEndPos(null);
+    setStartPos({ x: e.clientX, y: e.clientY });  // Lưu vị trí bắt đầu theo tọa độ chuột
+    setEndPos(null);                              // Đặt vị trí kết thúc là null
   };
 
+  // Hàm kéo chuột để tạo vùng snip
   const dragSnip = (e) => {
     if (startPos) {
-      const dx = e.clientX - startPos.x;
-      const dy = e.clientY - startPos.y;
+      const dx = e.clientX - startPos.x;  // Tính khoảng cách di chuyển theo trục X
+      const dy = e.clientY - startPos.y;  // Tính khoảng cách di chuyển theo trục Y
 
-      const limitedX = Math.min(Math.abs(dx), 640) * Math.sign(dx);
-      const limitedY = Math.min(Math.abs(dy), 640) * Math.sign(dy);
-
+      // Do Google Static Maps API giới hạn kích thước ảnh tối đa là 640x640px cho đám dân đen dùng miễn phí như mình,
+      const limitedX = Math.min(Math.abs(dx), 640) * Math.sign(dx); // Giới hạn khoảng cách di chuyển theo trục X không vượt quá 640px
+      const limitedY = Math.min(Math.abs(dy), 640) * Math.sign(dy); // Giới hạn khoảng cách di chuyển theo trục Y không vượt quá 640px
+ 
+      // Cập nhật vị trí kết thúc của snip
       setEndPos({
-        x: startPos.x + limitedX,
-        y: startPos.y + limitedY,
+        x: startPos.x + limitedX, // Tính vị trí tối đa theo tọa độ chuột
+        y: startPos.y + limitedY, // Tính vị trí tối đa theo tọa độ chuột
       });
 
-      const width = Math.min(Math.abs(dx), 640);
-      const height = Math.min(Math.abs(dy), 640);
+      // Giới hạn kích thước hiển thị tooltip không vượt quá 640px
+      const width = Math.min(Math.abs(dx), 640); // Giới hạn chiều rộng không vượt quá 640px
+      const height = Math.min(Math.abs(dy), 640);// Giới hạn chiều cao không vượt quá 640px
       setMousePos({
-        x: e.clientX,
-        y: e.clientY,
-        width,
-        height,
+        x: e.clientX, // Lưu vị trí chuột để hiển thị tooltip
+        y: e.clientY, // Lưu vị trí chuột để hiển thị tooltip
+        width,        // Lưu chiều rộng của vùng snip
+        height,       // Lưu chiều cao của vùng snip
       });
     }
   };
 
+  // Hàm tính toán kiểu dáng của hộp snip
+  // Dựa trên vị trí bắt đầu và kết thúc của snip
   const snipBoxStyle = () => {
     if (!startPos || !endPos) return { display: "none" };
-    const left = Math.min(startPos.x, endPos.x);
-    const top = Math.min(startPos.y, endPos.y);
-    const width = Math.abs(startPos.x - endPos.x);
-    const height = Math.abs(startPos.y - endPos.y);
+    const left = Math.min(startPos.x, endPos.x);    // Tính vị trí bên trái của hộp snip
+    const top = Math.min(startPos.y, endPos.y);     // Tính vị trí trên cùng của hộp snip
+    const width = Math.abs(startPos.x - endPos.x);  // Tính chiều rộng của hộp snip
+    const height = Math.abs(startPos.y - endPos.y); // Tính chiều cao của hộp snip
     return {
+      // Style thoai
       position: "absolute",
       left,
       top,
@@ -100,21 +110,24 @@ function SnippingTool({ onClose, mapCenter, zoom, polygonPath = [], mapType = "s
     };
   };
 
+  // Hàm tạo URL cho ảnh tĩnh từ Google Static Maps API
   const getStaticMapUrl = () => {
     if (!startPos || !endPos) return "";
 
+    // Tính toán tọa độ trung tâm của vùng snip
     const width = Math.abs(startPos.x - endPos.x);
     const height = Math.abs(startPos.y - endPos.y);
 
-    // Google Static Maps API max size: 640x640 unless using premium
+    // Giới hạn kích thước ảnh tối đa là 640x640px
     const limitedWidth = Math.min(width, 640);
     const limitedHeight = Math.min(height, 640);
-    const size = `${Math.round(limitedWidth)}x${Math.round(limitedHeight)}`;
+    const size = `${Math.round(limitedWidth)}x${Math.round(limitedHeight)}`;  // Kích thước ảnh theo định dạng "widthxheight"
 
-    const base = "https://maps.googleapis.com/maps/api/staticmap";
-    const key = import.meta.env.VITE_GG_API_KEY;
+    const base = "https://maps.googleapis.com/maps/api/staticmap";  // Base URL của Google Static Maps API
+    const key = import.meta.env.VITE_GG_API_KEY;                    // Lấy API key từ biến môi trường
 
     let pathParam = "";
+    // Nếu có polygonPath, tạo tham số path cho URL
     if (polygonPath && polygonPath.length > 0) {
       const pathCoords = polygonPath.map(p => `${p.lat},${p.lng}`).join("|");
       pathParam = `&path=color:0xff0000ff|weight:3|${pathCoords}`;

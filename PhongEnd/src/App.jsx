@@ -1,7 +1,7 @@
 import {GoogleMap,LoadScript,DrawingManager,Marker,Polygon,  Autocomplete,} from "@react-google-maps/api";
 import './App.css';
 import { useState, useRef, useEffect, useMemo } from "react";
-// import { OverlayView } from "@react-google-maps/api";
+import { OverlayView } from "@react-google-maps/api";
 import HybridPanelOverlay from "./components/HybridPanelOverlay";
 import SnippingTool from "./components/SnipingTool"; // Import snipping tool component, nếu cần dùng thì bỏ comment dòng này
 
@@ -35,7 +35,7 @@ function App() {
   const [editMode, setEditMode] = useState(false);                        // Chế độ chỉnh sửa polygon
 
   const [sunlightHours, setSunlightHours] = useState(5);                  // Số giờ nắng trung bình mỗi ngày, mặc định là 4.5 giờ 
-  const [panelGap, setPanelGap] = useState(0.2);                          // Khoảng cách giữa các panel, mặc định là 0.1 mét
+  const [panelGap, setPanelGap] = useState(0.5);                          // Khoảng cách giữa các panel, mặc định là 0.1 mét
   const [startPos, setStartPos] = useState(null);
   const [endPos, setEndPos] = useState(null);
   const [isPolygonMenuHovered, setIsPolygonMenuHovered] = useState(false);
@@ -196,6 +196,7 @@ function App() {
           strokeOpacity: 0.8,
           strokeWeight: 1,
         }}
+        
       />
     ));
   }, [selectedResult ?.panels_latlng]); // Theo dõi sự thay đổi của selectedResult.panels_latlng
@@ -240,6 +241,85 @@ function App() {
     const lng = place.geometry.location.lng();
     moveTo(lat, lng);
   };
+  
+  // =========================================================================================================================
+  // Hàm này sẽ render các nhãn khoảng cách giữa các cạnh của polygon
+  const renderPolygonEdgeLengths = (path) => {
+    if (!window.google || path.length < 2 || !mapRef.current) return null; // Kiểm tra xem có đủ điểm và bản đồ đã được tải chưa
+
+    const map = mapRef.current; // Lấy bản đồ từ ref
+    const projection = map.getProjection?.(); // Lấy projection của bản đồ, nếu không có thì trả về null
+    if (!projection) return null; // Nếu không có projection thì không thể tính toán được
+
+    // Xử lý các đoạn đường giữa các điểm trong path
+    return path.map((start, i) => {
+      const end = path[(i + 1) % path.length]; // Lấy điểm tiếp theo, nếu là điểm cuối thì quay về điểm đầu
+
+      const startLatLng = new window.google.maps.LatLng(start.lat, start.lng);  // Chuyển đổi tọa độ từ đối tượng sang LatLng, điểm bắt đầu
+      const endLatLng = new window.google.maps.LatLng(end.lat, end.lng);        // Chuyển đổi tọa độ từ đối tượng sang LatLng, điểm kết thúc
+      const distance = window.google.maps.geometry.spherical.computeDistanceBetween(startLatLng, endLatLng); // Tính khoảng cách giữa hai điểm
+
+      // === Đoạn này là để hiển thị nhãn khoảng cách trên bản đồ ===
+      // Tìm trung điểm giữa hai điểm để đặt nhãn
+      const midLat = (start.lat + end.lat) / 2;   // Tính vĩ độ trung bình
+      const midLng = (start.lng + end.lng) / 2;   // Tính kinh độ trung bình
+      const midLatLng = new window.google.maps.LatLng(midLat, midLng); // Tạo đối tượng LatLng cho trung điểm
+
+      const pointStart = projection.fromLatLngToPoint(startLatLng); // Chuyển đổi LatLng của điểm bắt đầu sang điểm pixel trên bản đồ
+      const pointEnd = projection.fromLatLngToPoint(endLatLng);     // Chuyển đổi LatLng của điểm kết thúc sang điểm pixel trên bản đồ
+      const pointMid = projection.fromLatLngToPoint(midLatLng);     // Chuyển đổi LatLng trung điểm sang điểm pixel trên bản đồ
+
+      const edgeDx = pointEnd.x - pointStart.x;                     // Tính khoảng cách theo trục X giữa hai điểm
+      const edgeDy = pointEnd.y - pointStart.y;                     // Tính khoảng cách theo trục Y giữa hai điểm
+      const length = Math.sqrt(edgeDx ** 2 + edgeDy ** 2);              // Không hiểu dòng này :)))
+      const offsetPx = -20; // Khoảng cách offset trục X theo pixel, có thể điều chỉnh tùy ý
+      const offsetPy = -20; // Khoảng cách offset trục Y theo pixel, có thể điều chỉnh tùy ý
+
+      const normalX = -(edgeDy / length); // Tính vector pháp tuyến trục X, đảm bảo nó hướng ra ngoài
+      const normalY = edgeDx / length;    // Tính vector pháp tuyến trục Y, đảm bảo nó hướng ra ngoài
+
+      const offsetMidX = pointMid.x + normalX * (offsetPx / (1 << map.getZoom()));  // Tính tọa độ X của nhãn, offset theo vector pháp tuyến
+      const offsetMidY = pointMid.y + normalY * (offsetPy / (1 << map.getZoom()));  // Tính tọa độ Y của nhãn, offset theo vector pháp tuyến
+
+      // Chuyển đổi tọa độ pixel đã offset về LatLng để hiển thị nhãn
+      const offsetLatLng = projection.fromPointToLatLng(
+        new window.google.maps.Point(offsetMidX, offsetMidY)
+      );
+
+      // Tính góc xoay của nhãn dựa trên vector từ điểm bắt đầu đến điểm kết thúc
+      const angleRad = Math.atan2(edgeDy, edgeDx);  // Tính góc theo radian
+      let angleDeg = angleRad * (180 / Math.PI);    // Chuyển đổi sang độ
+      const normalized = (angleDeg + 360) % 360;    // Chuẩn hóa góc về khoảng [0, 360)
+      if (normalized > 90 && normalized < 270) {    // Nếu góc nằm trong khoảng 90 đến 270 độ, cần lật nhãn
+        angleDeg += 180; // Lật 180 độ để nhãn luôn hướng lên trên
+      }
+      const color = "#d4ffb8"; // Biến đổ màu
+      return (
+        <OverlayView
+          key={`edge-${i}`}
+          position={offsetLatLng}
+          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+        >
+          <div
+            style={{
+              transform: `rotate(${angleDeg}deg)`,
+              transformOrigin: "center",      
+              color: "#00061f",
+              fontSize: "15px",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+              display: "flex",
+              justifyContent: "center",
+              textShadow: `0 0 3px ${color}, 0 0 3px ${color}, 0 0 3px ${color}, 0 0 3px ${color}, 0 0 3px ${color},0 0 3px ${color},0 0 3px ${color},0 0 3px ${color},0 0 3px ${color},0 0 3px ${color}`, // Hiệu ứng đổ bóng cho chữ
+              }}
+          >
+            {distance.toFixed(2)} m
+          </div>
+        </OverlayView>
+      );
+    });
+  };
 
   // =========================================================================================================================
   // Hàm xử lý khi vẽ polygon hoàn thành và gửi polygon đến backend chỉ để tính diện tích
@@ -274,8 +354,9 @@ function App() {
         // Lưu theo polygon_id
         setPolygonResults(prev => ({
           ...prev,
-          [polygon_id]: result,
+          [polygon_id]: result, // Lưu kết quả theo polygon_id
         }));
+        setPolygonPath(result.coordinates); // Cập nhật lại polygonPath
         setShowResult(true);
       })
       .catch(err => {
@@ -329,7 +410,7 @@ function App() {
   return (
     <LoadScript
       googleMapsApiKey={import.meta.env.VITE_GG_API_KEY} //Nạp API key từ .env
-      libraries={["drawing", "places"]} // Nạp các thư viện cần thiết, drwaing để vẽ polygon, places để sử dụng Autocomplete (search places)
+      libraries={["drawing", "places", "geometry"]} // Nạp các thư viện cần thiết, drwaing để vẽ polygon, places để sử dụng Autocomplete (search places)
     >
       {/* CÁC CÔNG CỤ, HIỆN TẠI MỚI CÓ SNIPPING TOOL VỚI SEARCH BAR THÔI */}
       <div id="toolbar">
@@ -432,28 +513,31 @@ function App() {
         />
 
         {polygons.map((path, idx) => (
-          <Polygon
-            key={idx}
-            path={path}
-            options={{
-              editable: editMode && selectedPolygonIndex === idx,
-              fillColor: selectedPolygonIndex === idx ? "#8cff80" : "#0015ff",
-              fillOpacity: selectedPolygonIndex === idx ? 0.6 : 0.4,
-              strokeColor: selectedPolygonIndex === idx ? "#00fc5d" : "#00f8fc",
-              strokeWeight: selectedPolygonIndex === idx ? 3 : 1,
-              clickable: true
-            }}
-            onClick={() => {
-              setSelectedPolygonIndex(idx);
-              if (selectedPolygonIndex != null && selectedPolygonIndex !== idx) {
-                console.log("Polygon đang chọn:", idx);
-                console.log("Tọa độ các góc:", path);
-                setEditMode(false); // Reset edit mode if another polygon is selected
-              }
-            }}
-            onLoad={onLoadPolygon} // Lưu tham chiếu đến polygon để có thể chỉnh sửa
-          />
+          <>
+            <Polygon
+              path={path}
+              options={{
+                editable: editMode && selectedPolygonIndex === idx,
+                fillColor: selectedPolygonIndex === idx ? "#8cff80" : "#0015ff",
+                fillOpacity: selectedPolygonIndex === idx ? 0.6 : 0.4,
+                strokeColor: selectedPolygonIndex === idx ? "#00fc5d" : "#00f8fc",
+                strokeWeight: selectedPolygonIndex === idx ? 3 : 1,
+                clickable: true
+              }}
+              onClick={() => {
+                setSelectedPolygonIndex(idx);
+                if (selectedPolygonIndex != null && selectedPolygonIndex !== idx) {
+                  console.log("Polygon đang chọn:", idx);
+                  console.log("Tọa độ các góc:", path);
+                  setEditMode(false);
+                }
+              }}
+              onLoad={onLoadPolygon}
+            />
+            {selectedPolygonIndex === idx && renderPolygonEdgeLengths(path)}
+          </>
         ))}
+
         {/* Hiển thị snipping tool nếu cần */}
         {/* danh sách polygon  */}
         <div
@@ -721,6 +805,7 @@ function App() {
               }}
             />
           ))}
+          
         
         {/* Vẽ các panel từ dữ liệu backend đã gửi về */}
         {renderedOverlayPanels}
