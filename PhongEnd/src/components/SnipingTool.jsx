@@ -27,12 +27,12 @@ function SnippingTool({ onClose, onResult, mapCenter, zoom, polygonPath = [], ma
       formData.append("scale", scale); // Thêm tỷ lệ ảnh vào formData
 
       // Debug
-      // console.log("Sending to backend:", {
-      //   center: { lat: centerLat, lng: centerLng },
-      //   zoom,
-      //   size,
-      //   fileName: file.name,
-      // });
+      console.log("Sending to backend:", {
+        center: { lat: centerLat, lng: centerLng },
+        zoom,
+        size,
+        fileName: file.name,
+      });
 
       const res = await fetch("http://localhost:8000/model/predict", {
         method: "POST",
@@ -217,10 +217,10 @@ function SnippingTool({ onClose, onResult, mapCenter, zoom, polygonPath = [], ma
     setSnipping(false);
 
     const { url, centerLat, centerLng, zoom, size, scale} = getStaticMapUrl();
-    // console.log("Static Map URL:", url);
-    // console.log("Center:", { lat: centerLat, lng: centerLng });
-    // console.log("Zoom:", zoom);
-    // console.log("Size:", size);
+    console.log("Static Map URL:", url);
+    console.log("Center:", { lat: centerLat, lng: centerLng });
+    console.log("Zoom:", zoom);
+    console.log("Size:", size);
 
     sendToBackend(url, centerLat, centerLng, zoom, size, scale);
 
@@ -238,7 +238,7 @@ function SnippingTool({ onClose, onResult, mapCenter, zoom, polygonPath = [], ma
             left: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor: "rgba(36, 0, 0, 0.14)",
+            backgroundColor: "rgba(36, 0, 0, 0.23)",
             zIndex: 9999,
             cursor: "crosshair",
           }}

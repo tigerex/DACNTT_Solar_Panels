@@ -44,27 +44,42 @@ except Exception as e:
 # Các hàm chuyển đổi tọa độ Google Maps sang tọa độ thế giới và ngược lại
 TILE_SIZE = 256
 
-def latlng_to_world(lat, lng):
-    siny = math.sin(lat * math.pi / 180)
-    siny = min(max(siny, -0.9999), 0.9999)
-    x = TILE_SIZE * (0.5 + lng / 360)
-    y = TILE_SIZE * (0.5 - math.log((1 + siny) / (1 - siny)) / (4 * math.pi))
+def latlng_to_world(lat, lng, zoom):
+    world_size = TILE_SIZE * (2 ** zoom)
+
+    x = (lng + 180.0) / 360.0 * world_size
+    siny = math.sin(lat * math.pi / 180.0)
+    y = 0.5 - math.log((1 + siny) / (1 - siny)) / (4 * math.pi)
+    y *= world_size
+
     return x, y
 
-def world_to_latlng(x, y):
-    lng = (x / TILE_SIZE - 0.5) * 360
-    lat_rad = 2 * math.atan(math.exp((0.5 - y / TILE_SIZE) * 2 * math.pi)) - math.pi / 2
-    lat = lat_rad * 180 / math.pi
+def world_to_latlng(x, y, zoom):
+    world_size = TILE_SIZE * (2 ** zoom)
+
+    lng = (x / world_size) * 360.0 - 180.0
+    y = 0.5 - (y / world_size)
+    lat = 90.0 - 360.0 * math.atan(math.exp(-y * 2.0 * math.pi)) / math.pi
+
     return lat, lng
 
 def pixel_to_latlng(px, py, zoom, scale, center_lat, center_lng, image_width, image_height):
-    center_world_x, center_world_y = latlng_to_world(center_lat, center_lng)
-    scale_factor = (TILE_SIZE * scale) / TILE_SIZE
-    dx = px - image_width / 2
-    dy = py - image_height / 2
-    x = center_world_x + dx / scale_factor
-    y = center_world_y + dy / scale_factor
-    return world_to_latlng(x, y)
+    # Map size in pixels at this zoom level
+    world_size = TILE_SIZE * (2 ** zoom)
+
+    # Convert center point to world coordinates
+    center_world_x, center_world_y = latlng_to_world(center_lat, center_lng, zoom)
+
+    # Pixel distance from center (scaled)
+    dx = (px - image_width / 2) / scale
+    dy = (py - image_height / 2) / scale
+
+    # New world coordinates
+    x = center_world_x + dx
+    y = center_world_y + dy
+
+    return world_to_latlng(x, y, zoom)
+
 
 # # Hàm tiền xử lý ảnh
 # def preprocess_image(image_path, img_width, img_height):
@@ -129,15 +144,22 @@ def predict_large_image(model, image, tile_size=512, overlap=256, threshold=0.5)
     return (final_mask > threshold).astype(np.uint8) * 255
 
 # Hàm để trích xuất polygon từ mask
-def extract_polygons_from_mask(mask):
+def extract_polygons_from_mask(mask, simplyfiy_rate=0.01):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     polygons = []
+
     for contour in contours:
         if cv2.contourArea(contour) > 300:
-            polygon = contour.squeeze().tolist()
-            if isinstance(polygon[0], list):  # multiple points
+            # Epsilon controls how much to simplify: 1% of perimeter here
+            epsilon = simplyfiy_rate * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+
+            polygon = approx.squeeze().tolist()
+            if isinstance(polygon[0], list):
                 polygons.append(polygon)
+
     return polygons
+
 
 # Endpoint để dự đoán ảnh
 @router.post("/predict")
@@ -152,6 +174,9 @@ async def predict_endpoint(file: UploadFile = File(...), center: str= Form(...),
         if width <= 0 or height <= 0:
             return JSONResponse(status_code=400, content={"error": "Invalid size dimensions"})
         
+        # debug
+        print(f"Received file: {file.filename}, center: ({center_lat}, {center_lng}), zoom: {zoom}, size: {size}, scale: {scale}")
+
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
@@ -159,7 +184,8 @@ async def predict_endpoint(file: UploadFile = File(...), center: str= Form(...),
         mask = predict_large_image(model, image)
         end_time = time.time()
 
-        polygons_px = extract_polygons_from_mask(mask)
+        polygons_px = extract_polygons_from_mask(mask, simplyfiy_rate=0.01)
+        print(f"Extracted {len(polygons_px)} polygons from mask")
 
         # Convert mask to base64
         mask_img = Image.fromarray(mask)
