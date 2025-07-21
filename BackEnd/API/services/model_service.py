@@ -42,9 +42,11 @@ except Exception as e:
     print(f"Error loading model: {e}")
 
 # Các hàm chuyển đổi tọa độ Google Maps sang tọa độ thế giới và ngược lại
-TILE_SIZE = 256
+TILE_SIZE = 256 # Kích thước của một tile trong Google Maps (256x256 pixels)
 
+# Hàm chuyển đổi tọa độ vĩ độ và kinh độ sang tọa độ thế giới
 def latlng_to_world(lat, lng, zoom):
+    
     world_size = TILE_SIZE * (2 ** zoom)
 
     x = (lng + 180.0) / 360.0 * world_size
@@ -54,6 +56,7 @@ def latlng_to_world(lat, lng, zoom):
 
     return x, y
 
+# Hàm chuyển đổi tọa độ thế giới sang tọa độ vĩ độ và kinh độ
 def world_to_latlng(x, y, zoom):
     world_size = TILE_SIZE * (2 ** zoom)
 
@@ -64,17 +67,17 @@ def world_to_latlng(x, y, zoom):
     return lat, lng
 
 def pixel_to_latlng(px, py, zoom, scale, center_lat, center_lng, image_width, image_height):
-    # Map size in pixels at this zoom level
+    # Tính toán kích thước thế giới với độ zoom
     world_size = TILE_SIZE * (2 ** zoom)
 
-    # Convert center point to world coordinates
+    # Tính toán tọa độ thế giới từ tọa độ trung tâm
     center_world_x, center_world_y = latlng_to_world(center_lat, center_lng, zoom)
 
-    # Pixel distance from center (scaled)
+    # Tính toán tọa độ thế giới từ pixel
     dx = (px - image_width / 2) / scale
     dy = (py - image_height / 2) / scale
 
-    # New world coordinates
+    # Tọa độ thế giới mới
     x = center_world_x + dx
     y = center_world_y + dy
 
