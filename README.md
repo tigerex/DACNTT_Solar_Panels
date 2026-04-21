@@ -76,12 +76,25 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
           - Hết rồi, tạm thời tới đây thôi
 
 # 👏 Hình ảnh thực tế của project
+
+### User search địa chỉ mong muốn và vẽ polygon lên mái nhà
+Thì chức năng này user sẽ xác định mái nhà thủ công, và sau đó web sẽ trả về kết quả lắp đặt solar panel tương ứng với hình dáng mái nhà
+
 <p align="center">
   <img src="resultScreenshots/Picture1.jpg" width="500" />
-  <img src="resultScreenshots/Picture3.png" width="600" />
-  <img src="resultScreenshots/Picture2.png" width="700" />
-  <img src="resultScreenshots/Picture4.png" width="400" />
+  <img src="resultScreenshots/Picture2.jpg" width="500" />
+  <img src="resultScreenshots/Picture3.jpg" width="500" />
+  <img src="resultScreenshots/Picture4.jpg" width="500" />
   <img src="resultScreenshots/Picture5.jpg" width="500" />
-  <img src="resultScreenshots/Picture6.png" width="500" />
-  <img src="resultScreenshots/Picture7.png" width="500" />
 </p>
+
+### Model nhận hình ảnh và tự động nhận diện mái nhà
+Chức năng này user chỉ cần snipping vùng nào đó, model sẽ tự nhận diện các mái nhà, và sau đó web sẽ trả về kết quả lắp đặt solar panel tương ứng với hình dáng mái nhà. Tuy nhiên, chức năng này tại thời điểm nộp báo cáo thì chưa hoàn thành, đang ở bước train model và hình ảnh bên dưới là kết quả.     
+<p align="center">
+  <img src="resultScreenshots/Picture6.jpg" width="600" />
+  <img src="resultScreenshots/Picture7.jpg" width="600" />
+  <br></br>
+  <img src="resultScreenshots/Picture8.jpg" width="300" />
+  <img src="resultScreenshots/Picture9.jpg" width="500" />
+</p>
+
