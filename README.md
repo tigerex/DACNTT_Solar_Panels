@@ -74,3 +74,14 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
        - Tui có để vài ảnh cho các bạn quậy:
           - Model đọc file .tif nên file .png hay .jpe cần được đổi lại => vào testIMG để đổi
           - Hết rồi, tạm thời tới đây thôi
+
+# 👏 Hình ảnh thực tế của project
+<p align="center">
+  <img src="resultScreenshots/Picture1.jpg" width="250" />
+  <img src="resultScreenshots/Picture2.png" width="250" />
+  <img src="resultScreenshots/Picture3.png" width="250" />
+  <img src="resultScreenshots/Picture4.png" width="250" />
+  <img src="resultScreenshots/Picture5.png" width="250" />
+  <img src="resultScreenshots/Picture6.png" width="250" />
+  <img src="resultScreenshots/Picture7.png" width="250" />
+</p>
