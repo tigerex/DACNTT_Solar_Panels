@@ -77,11 +77,11 @@ Thế là xong tạo môi trường, và nhìn như vầy là ok!!!!
 
 # 👏 Hình ảnh thực tế của project
 <p align="center">
-  <img src="resultScreenshots/Picture1.jpg" width="250" />
-  <img src="resultScreenshots/Picture2.png" width="250" />
-  <img src="resultScreenshots/Picture3.png" width="250" />
-  <img src="resultScreenshots/Picture4.png" width="250" />
-  <img src="resultScreenshots/Picture5.png" width="250" />
-  <img src="resultScreenshots/Picture6.png" width="250" />
-  <img src="resultScreenshots/Picture7.png" width="250" />
+  <img src="resultScreenshots/Picture1.jpg" width="500" />
+  <img src="resultScreenshots/Picture3.png" width="600" />
+  <img src="resultScreenshots/Picture2.png" width="700" />
+  <img src="resultScreenshots/Picture4.png" width="400" />
+  <img src="resultScreenshots/Picture5.jpg" width="500" />
+  <img src="resultScreenshots/Picture6.png" width="500" />
+  <img src="resultScreenshots/Picture7.png" width="500" />
 </p>
